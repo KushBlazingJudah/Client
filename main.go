@@ -1009,6 +1009,7 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	returnData.Board.InReplyTo = ""
 	returnData.Board.To = actor.Outbox
 	returnData.Board.Actor = actor.Id
+	returnData.Key = *Key
 	
 	id, _ := GetPasswordFromSession(r)															
 
@@ -1336,7 +1337,8 @@ func ParseCommentForReply(comment string) string {
 	for i:= 0; i < len(match); i++ {
 		str := strings.Replace(match[i][0], ">>", "", 1)
 		str = strings.Replace(str, "http://", "", 1)
-		str = "http://" + str
+		str = strings.Replace(str, "https://", "", 1)		
+		str = "https://" + str
 		links = append(links, str)
 	}
 
