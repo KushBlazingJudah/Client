@@ -1325,10 +1325,6 @@ func GetObjectsFromFollow(actor Actor) []ObjectBase {
 
 func ParseCommentForReply(comment string) string {
 	
-	// This may not catch every case... could be improved.
-	// works upto https://www.example.com:3000/board/post/8593J32
-	// ^>\w.+ this is for quote
-	//	re := regexp.MustCompile("(>>)\\w+:?\\/?\\/?\\w+.?\\w+.?\\w+:?\\/?\\w+\\/?\\w+")
 	re := regexp.MustCompile("(>>)(https://|http://)?(www\\.)?.+\\/\\w+")	
 	match := re.FindAllStringSubmatch(comment, -1)
 
