@@ -1,0 +1,278 @@
+{{ define "header" }}
+<script src="/static/js/posts.js"></script>
+{{ end }}
+
+{{ define "content" }}
+{{ $board := .Board }}
+
+
+<div style="margin: 0 auto; width: 400px; margin-bottom: 100px;">
+  <h1 style="color: #af0a0f;">/{{ $board.Name }}/ - {{ $board.PrefName }}</h1>
+  <p>{{ $board.Summary }}</p>
+  <form id="new-post" action="/post" method="post" name="new-post" enctype="multipart/form-data">      
+    <!--   <form id="new-post" action="{{ $board.To }}" method="post" name="new-post" enctype="multipart/form-data"> -->
+      <label for="name">Name:</label><br>
+      <input type="text" id="name" name="name" placeholder="Anonymous"><br>
+      <label for="options">Options:</label><br>
+      <input type="text" id="options" name="options"><br>
+      <label for="subject">Subject:</label><br>      
+      <input type="text" id="subject" name="subject"><input type="submit" value="Post"><br>
+      <label for="comment">Comment:</label><br>
+      <textarea rows="10" cols="50" id="comment" name="comment"></textarea><br>
+      <input type="hidden" id="inReplyTo" name="inReplyTo" value="{{ $board.InReplyTo }}">
+      <input type="hidden" id="sendTo" name="sendTo" value="{{ $board.To }}">
+      <input type="hidden" id="boardName" name="boardName" value="{{ $board.Name }}">
+      <input type="hidden" id="captchaCode" name="captchaCode" value="{{ $board.CaptchaCode }}">        
+      <input type="file" id="file" name="file" required><br><br>
+      <label stye="display: inline-block;" for="captcha">Captcha:</label><br>      
+      <input style="display: inline-block;"  type="text" id="captcha" name="captcha"><br>
+      <div style="height: 65px;">
+        <img src="{{ $board.Captcha }}">
+      </div>        
+    </form>
+</div>
+
+<hr>
+<ul style="margin: 0; padding: 0; display: inline">
+  <li style="display: inline"><a href="/{{ $board.Name }}/catalog">[Catalog]</a></li>      
+  <li style="display: inline"><a href="#bottom">[Bottom]</a></li>
+  <li style="display: inline"><a href="javascript:location.reload()">[Refresh]</a></li>
+</ul>
+
+
+{{ range .Posts }}
+{{ $opId := .Id }}
+<hr>
+<div style="overflow: auto;">
+  <div id="{{ .Id }}" style="overflow: visible; margin-bottom: 12px;">
+    {{ if $board.IsMod }}
+    <a href="/delete?id={{ .Id }}">[Delete Post]</a>
+    {{ end }}        
+    {{ if .Attachment }}
+    {{ if $board.IsMod }}
+    <a href="/deleteattach?id={{ .Id }}">[Delete Attachment]</a>
+    {{ end }}                
+    <span style="display: block;">File: <a id="{{ .Id }}-img" href="{{ (index .Attachment 0).Href}}">{{ (index .Attachment 0).Name  }}</a><span id="{{ .Id }}-size">({{ (index .Attachment 0).Size  }})</span></span>
+    <div id="media-{{ .Id }}"></div>
+    <script>
+      media = document.getElementById("media-{{ .Id }}")
+      if(getMIMEType({{ (index .Attachment 0).MediaType }}) == "image"){
+          var img = document.createElement("img");
+          img.style = "float: left; margin-right: 10px; margin-bottom: 10px; max-width: 250px; max-height: 250px; cursor: move;"
+          img.setAttribute("id", "img")
+          img.setAttribute("main", "1")
+          img.setAttribute("enlarge", "0")                            
+          img.setAttribute("src", "{{ (index .Attachment 0).Href }}")
+          media.appendChild(img)
+      }          
+
+      if(getMIMEType({{ (index .Attachment 0).MediaType }}) == "audio"){
+          var audio = document.createElement("audio")
+          audio.controls = 'controls'
+          audio.muted    = 'muted'              
+          audio.src      = '{{ (index .Attachment 0).Href }}'
+          audio.type     = '{{ (index .Attachment 0).MediaType }}'              
+          audio.style = "float: left; margin-right: 10px; margin-bottom: 10px; width: 250px;"
+          audio.innerText = 'Audio is not supported.'
+          media.appendChild(audio)                            
+      }
+
+      if(getMIMEType({{ (index .Attachment 0).MediaType }}) == "video"){
+          var video = document.createElement("video")
+          video.controls = 'controls'
+          video.muted    = 'muted'              
+          video.src      = '{{ (index .Attachment 0).Href }}'
+          video.type     = '{{ (index .Attachment 0).MediaType }}'              
+          video.style = "float: left; margin-right: 10px; margin-bottom: 10px; width: 250px;"
+          video.innerText = 'Video is not supported.'
+          media.appendChild(video)                                          
+      }                    
+    </script>
+    {{ end }}
+    <span style="color: #0f0c5d;"><b>{{ .Name }}</b></span><span style="color: #117743;"><b>{{ if .AttributedTo }} {{.AttributedTo }} {{ else }} Anonymous {{ end }}</b></span><span>{{ .Published }} <a id="{{ .Id }}-anchor" href="/{{ $board.Name }}/">No.</a> <a id="{{ .Id }}-link" title="{{ .Id }}" href="javascript:quote('{{ $board.Actor }}', '{{ $opId }}', '{{ .Id }}')">{{ .Id }}</a> {{ if ne .Type "Tombstone" }}<a href="/report?id={{ .Id }}&board={{ $board.Name }}">[Report]</a>{{ end }}</span>
+    <p id="{{ .Id }}-content" style="white-space: pre-wrap; margin: 10px 30px 10px 30px;">{{.Content}}</p>
+    {{ if .Replies }}
+    {{ $replies := .Replies }}
+    {{ if gt $replies.TotalItems 5 }}
+    <span>{{ $replies.TotalItems }} replies{{ if gt $replies.TotalImgs 0}} and  {{ $replies.TotalImgs }} images{{ end }}, Click <a href="/{{ $board.Name }}/post/{{ .Id }}">here</a> to view all.</span>
+    {{ end }}
+    {{ range $replies.OrderedItems }}
+    <div id="{{ .Id }}">
+      <div  style="display: inline-block; overflow: auto;">
+        <div style="float: left; display: block; margin-right: 5px;">>></div>
+        <div style="overflow: auto;background-color: #d5daf0; padding: 5px; margin-bottom: 2px;">
+          {{ if $board.IsMod }}              
+          <a href="/delete?id={{ .Id }}">[Delete Post]</a>
+          {{ end }}              
+          {{ if .Attachment }}
+          {{ if $board.IsMod }}                            
+          <a href="/deleteattach?id={{ .Id }}">[Delete Attachment]</a>
+          {{ end }}
+          <span style="display: block;">File <a id="{{ .Id }}-img" href="{{ (index .Attachment 0).Href}}">{{ (index .Attachment 0).Name  }}</a> <span id="{{ .Id }}-size">({{ (index .Attachment 0).Size  }})</span></span>
+          <div id="media-{{ .Id }}"></div>
+          <script>
+            media = document.getElementById("media-{{ .Id }}")
+            if(getMIMEType({{ (index .Attachment 0).MediaType }}) == "image"){
+                var img = document.createElement("img");
+                img.style = "float: left; margin-right: 10px; margin-bottom: 10px; max-width: 250px; max-height: 250px; cursor: move;"
+                img.setAttribute("id", "img")
+                img.setAttribute("main", "1")
+                img.setAttribute("enlarge", "0")                            
+                img.setAttribute("src", "{{ (index .Attachment 0).Href }}")
+                media.appendChild(img)
+            }
+
+            if(getMIMEType({{ (index .Attachment 0).MediaType }}) == "audio"){
+                var audio = document.createElement("audio")
+                audio.controls = 'controls'
+                audio.muted    = 'muted'              
+                audio.src      = '{{ (index .Attachment 0).Href }}'
+                audio.type     = '{{ (index .Attachment 0).MediaType }}'              
+                audio.style = "float: left; margin-right: 10px; margin-bottom: 10px; width: 250px;"
+                audio.innerText = 'Audio is not supported.'
+                media.appendChild(audio)              
+            }
+
+            if(getMIMEType({{ (index .Attachment 0).MediaType }}) == "video"){
+                var video = document.createElement("video")
+                video.controls = 'controls'
+                video.muted    = 'muted'              
+                video.src      = '{{ (index .Attachment 0).Href }}'
+                video.type     = '{{ (index .Attachment 0).MediaType }}'              
+                video.style = "float: left; margin-right: 10px; margin-bottom: 10px; width: 250px;"
+                video.innerText = 'Video is not supported.'
+                media.appendChild(video)                                                        
+            }                    
+          </script>              
+
+
+          {{ end }}
+          <span style="color: #0f0c5d;"><b>{{ .Name }}</b></span><span style="color: #117743;"><b>{{ if .AttributedTo }} {{.AttributedTo }} {{ else }} Anonymous {{ end }}</b></span><span>{{ .Published }} <a id="{{ .Id }}-anchor" href="/{{ $board.Name }}/post/{{ $opId }}#{{ .Id }}">No. </a><a id="{{ .Id }}-link" title="{{ .Id }}" href="javascript:quote('{{ $board.Actor }}', '{{ $opId }}', '{{ .Id }}')">{{ .Id }}</a> {{ if ne .Type "Tombstone" }}<a href="/report?id={{ .Id }}&board={{ $board.Name }}">[Report]</a>{{ end }}</span>
+          {{ $parentId := .Id }}
+          {{ if .Replies.OrderedItems }}
+          {{ range .Replies.OrderedItems }}
+          <span id="{{$parentId}}-replyto-{{.Id}}"></span>
+          <script>
+            document.getElementById("{{ $parentId }}-replyto-{{.Id}}").innerHTML = "<a title='{{ .Id }}' href='/{{ $board.Name }}/" + shortURL("{{ $board.Actor }}", "{{ $opId }}") + "#" + shortURL("{{ $board.Actor }}", "{{ .Id }}") + "'>>>" + shortURL("{{ $board.Actor }}", "{{ .Id }}") + "</a>";                 </script>
+                                                                                                                                                                                             {{ end }}
+                                                                                                                                                                                             {{ end }}      
+                                                                                                                                                                                             <p id="{{ .Id }}-content" style="white-space: pre-wrap; margin: 10px 30px 10px 30px;">{{.Content}}</p>
+        </div>
+      </div>
+    </div>
+    <script>
+      {{ if .Attachment }}
+      document.getElementById("{{ .Id }}-size").innerText = " (" + convertSize({{ (index .Attachment 0).Size }}) + ")";
+      document.getElementById("{{ .Id }}-img").innerText = shortImg("{{ (index .Attachment 0).Name }}");
+      {{ end }}
+
+      document.getElementById("{{ .Id }}-link").innerText = shortURL("{{ $board.Actor }}", "{{ .Id }}");
+
+      document.getElementById("{{ .Id }}-anchor").href = "/{{ $board.Name }}/" + shortURL("{{$board.Actor}}", "{{ $opId }}") +
+    "#" + shortURL("{{$board.Actor}}", "{{ .Id }}");                
+      document.getElementById("{{ .Id }}").setAttribute("id", shortURL("{{$board.Actor}}", "{{ .Id }}"));
+
+      var content = document.getElementById("{{ .Id }}-content");
+
+      content.innerHTML = convertContent('{{$board.Actor}}', content.innerText, '{{ $opId }}')        
+
+    </script>      
+    {{ end }}
+    {{ end }}
+  </div>
+</div>
+<script>
+  {{ if .Attachment }}      
+  document.getElementById("{{ .Id }}-size").innerText = " (" + convertSize({{ (index .Attachment 0).Size }}) + ")";
+  document.getElementById("{{ .Id }}-img").innerText = shortImg("{{ (index .Attachment 0).Name }}");
+  {{ end }}
+
+  document.getElementById("{{ .Id }}-link").innerText = shortURL("{{ $board.Actor }}", "{{ .Id }}");
+
+  document.getElementById("{{ .Id }}").setAttribute("id", shortURL("{{ $board.Actor }}", "{{ .Id }}"));
+
+  document.getElementById("{{ .Id }}-anchor").href = "/{{ $board.Name }}/" + shortURL("{{$board.Actor}}", "{{ $opId }}") +
+    "#" + shortURL("{{$board.Actor}}", "{{ .Id }}");
+
+  var content = document.getElementById("{{ .Id }}-content");
+
+  content.innerHTML = convertContent('{{$board.Actor}}', content.innerText, '{{ $opId }}')              
+
+</script>
+{{end}}
+<hr>
+<ul style="margin: 0; padding: 0; display: inline">
+  <li style="display: inline"><a href="/{{ $board.Name }}/catalog">[Catalog]</a></li>
+  <li style="display: inline"><a id="bottom" href="#top">[Top]</a></li>
+  <li style="display: inline"><a href="javascript:location.reload()">[Refresh]</a></li>
+</ul>
+<hr>
+{{ if gt .TotalPage 0 }}
+{{ $totalPage := .TotalPage }}
+<ul style="float: right; margin: 0; padding: 0; display: inline">
+  {{ $page := .CurrentPage }}      
+  {{ if gt $page 0 }}
+  <li style="display: inline"><button onclick="previous('{{$board.Name }}', '{{ $page }}')">Previous</button></li>
+  {{ end }}
+  {{ range $i, $e := .Pages }}
+  {{ if eq $i $page}}
+  <li style="display: inline"><a href="/{{ $board.Name }}/{{ $i }}"><b>[{{ $i }}]</b></a></li>                    {{ else }}
+  <li style="display: inline"><a href="/{{ $board.Name }}/{{ $i }}">[{{ $i }}]</a></li>              
+  {{ end }}
+  {{ end }}
+  {{ if lt .CurrentPage .TotalPage }}
+  <li style="display: inline"><button onclick="next('{{ $board.Name }}','{{ $totalPage }}' ,'{{ $page }}')">next</button></li>
+  {{ end }}
+</ul>
+{{ end }}
+<div id="reply-box" style="display: none; ">
+  <div id="reply-header" style="display: inline-block; width: 370px; z-index: 0; cursor: move;"></div><div id="reply-close" style="display: inline-block; float: right;"><a href="javascript:closeReply()">[X]</a></div>
+  <form id="reply-post" action="/post" method="post" enctype="multipart/form-data">
+    <input id="reply-name" name="name" size="43" type="text" placeholder="Name">
+    <input id="reply-options" name="options" size="43" type="text" placeholder="Options">
+    <textarea id="reply-comment" name="comment" rows="12" cols="54" style="width: 396px;"></textarea>
+    <input id="reply-file" name="file" type="file">
+    <input id="reply-submit" type="submit" value="Reply" style="float: right;">
+    <input type="hidden" id="inReplyTo-box" name="inReplyTo" value="{{ $board.InReplyTo }}">
+    <input type="hidden" id="sendTo" name="sendTo" value="{{ $board.To }}">
+    <input type="hidden" id="boardName" name="boardName" value="{{ $board.Name }}">
+    <input type="hidden" id="captchaCode" name="captchaCode" value="{{ $board.CaptchaCode }}">
+    <div style="width: 202px; margin: 0 auto; padding-top: 12px;">
+      <label for="captcha">Captcha:</label><br>      
+      <input style="display: inline-block;"  type="text" id="captcha" name="captcha"><br>
+    </div>
+    <div style="width: 230px; margin: 0 auto;">
+      <img src="{{ $board.Captcha }}">
+    </div>      
+  </form>
+</div>    
+
+{{ end }}
+{{ define "script" }}
+<script>
+  var imgs = document.querySelectorAll('#img');
+  var imgArray = [].slice.call(imgs);
+
+  imgArray.forEach(function(img, i){
+      img.addEventListener("click", function(e){
+          if(img.getAttribute("enlarge") == "0")
+          {
+              img.setAttribute("enlarge", "1");
+              img.setAttribute("style", "float: left; margin-right: 10px; cursor: move;");
+          }
+          else
+          {
+              img.setAttribute("enlarge", "0");
+              if(img.getAttribute("main") == 1)
+              {
+                  img.setAttribute("style", "float: left; margin-right: 10px; max-width: 250px; max-height: 250px; cursor: move;");
+              }
+              else
+              {
+                  img.setAttribute("style", "float: left; margin-right: 10px; max-width: 125px; max-height: 125px; cursor: move;");
+              }
+          }
+      });
+  })
+</script>    
+{{ end }}

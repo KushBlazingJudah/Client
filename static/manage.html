@@ -1,0 +1,68 @@
+{{ define "title" }}{{ .Title }}{{ end }}
+{{ define "header" }} {{ end }}
+{{ define "content" }}
+<div style="text-align: center; margin: 0 auto; width: 400px;">
+  <h1>Manage /{{ .Board.Name }}/</h1>
+  <!-- <div><a href="/{{ .Key }}/deleteboard?name={{ .Board.Name }}">[Delete Board]</a></div>     -->
+  <ul style="display: inline-block; padding: 0;">
+    <li style="display: inline-block;"><a href="javascript:show('following')">[ Subscribed ]</a></li>
+    <!-- <li style="display: inline-block;"><a href="javascript:show('followers')">Subscribers</a></li> -->
+    <li style="display: inline-block;"><a href="javascript:show('reported')">[ Reported ]</a></li>            
+  </ul>
+</div>    
+<a href="/{{ .Board.Name }}">[Return]</a>
+<div id="following">
+  <h4>Subscribed</h4>
+  <form id="follow-form" action="/{{ .Key }}/{{ .Board.Name }}/follow" method="post" enctype="application/x-www-form-urlencoded">  
+    <label>Subscribe:</label><br>
+    <input id="follow" name="follow" style="margin-bottom: 12px;" placeholder="https://localhost:3000/g"></input>
+    <input type="submit" value="Subscribe"><br>
+    <input type="hidden" name="actor" value="{{ .Actor }}">            
+  </form>
+  <ul style="display: inline-block; padding: 0; margin: 0;">
+    {{ $actor := .Actor }}
+    {{ $board := .Board }}
+    {{ $key := .Key }}
+    {{ range .Following }}
+    <li><a href="/{{ $key }}/{{ $board.Name }}/follow?follow={{ . }}&actor={{ $actor }}">[Unsubscribe]</a><a href="{{ . }}">{{ . }}</a></li>
+    {{ end }}
+  </ul>
+</div>
+
+<!--- Need to implement
+<div id="followers" style="display: none;">
+  <h4>Subscribers</h4>
+  <ul style="display: inline-block; padding: 0; margin: 0;">
+    {{ range .Followers }}
+    <li><a href="http://localhost:3000/g">{{ . }}</a></li>
+    {{ end }}        
+  </ul>      
+</div>
+-->
+
+<div id="reported" style="display: none;">
+  <h4>Reported</h4>
+  <ul style="display: inline-block; padding: 0; margin: 0;">
+    {{ range .Reported }}
+    <li><a href="">{{ .ID }} </a> - <b>{{ .Count }}</b> <a href="http://192.168.0.9:4000/delete?id={{ .ID }}">[Remove Post]</a> <a href="http://192.168.0.9:4000/deleteattach?id={{ .ID }}">[Remove Attachment]</a> <a href="http://192.168.0.9:4000/report?id={{ .ID }}&close=1&board={{ $board.Name }}">[Close]</a></li>
+    {{ end }}
+  </ul>            
+</div>
+{{ end }}
+
+{{ define "script" }}
+<script>
+  function show(element)
+  {
+      var following = document.getElementById("following");
+      // var followers = document.getElementById("followers");
+      var reported = document.getElementById("reported");
+
+      following.style.display = "none";
+      // followers.style.display = "none";
+      reported.style.display = "none";
+
+      document.getElementById(element).style.display = "block";
+  }
+</script>
+{{ end }}
