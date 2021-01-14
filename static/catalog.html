@@ -77,7 +77,9 @@
       {{end}}
     </ul>
     {{ $board := .Board }}
-    <span style="float: right;"><a href="/1234/{{ $board.Name }}/manage">[Manage Board]</a></span>                
+    {{ if $board.IsMod }}
+    <span style="float: right;"><a href="/{{ .Key }}/{{ .Board.Name }}">[Manage Board]</a></span>
+    {{ end }}        
     <div style="margin: 0 auto; width: 400px; margin-bottom: 100px;">
       <h1 style="color: #af0a0f;">/{{ $board.Name }}/ - {{ $board.PrefName }}</h1>
       <form id="new-post" action="/post" method="post" enctype="multipart/form-data">
@@ -113,9 +115,13 @@
     <div style="padding: 10px; text-align: center;">
       {{ range .Posts }}
       <div style="overflow: hidden; vertical-align: top; margin: 0 auto; display: inline-block; width: 180px; max-height: 320px; margin-bottom: 10px;">
+        {{ if $board.IsMod }}        
         <a href="/delete?id={{ .Id }}">[Delete Post]</a>
+        {{ end }}
         {{ if .Attachment }}
+        {{ if $board.IsMod }}        
         <a href="/deleteattach?id={{ .Id }}">[Delete Attachment]</a>
+        {{ end }}        
         <a id="{{ .Id }}-anchor" href="/{{ $board.Name }}/">
           <div id="media-{{ .Id }}"></div>
           <script>

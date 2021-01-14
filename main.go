@@ -1009,6 +1009,14 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	returnData.Board.InReplyTo = ""
 	returnData.Board.To = actor.Outbox
 	returnData.Board.Actor = actor.Id
+	
+	id, _ := GetPasswordFromSession(r)															
+
+	if actor.Id == id {
+		returnData.Board.IsMod = true
+	} else {
+		returnData.Board.IsMod = false		
+	}	
 
 	re := regexp.MustCompile("(https://|http://)?(www)?.+/")
 
