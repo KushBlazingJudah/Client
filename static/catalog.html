@@ -122,7 +122,7 @@
             media = document.getElementById("media-{{ .Id }}")
             if(getMIMEType({{ (index .Attachment 0).MediaType }}) == "image"){
                 var img = document.createElement("img");
-                img.style = "float: left; margin-right: 10px; margin-bottom: 10px; max-width: 250px; max-height: 250px; cursor: move;"
+                img.style = "float: left; margin-right: 10px; margin-bottom: 10px; max-width: 150px; max-height: 150px; cursor: move;"
                 img.setAttribute("id", "img")
                 img.setAttribute("main", "1")
                 img.setAttribute("src", "{{ (index .Attachment 0).Href }}")
@@ -135,7 +135,7 @@
                 audio.muted    = 'muted'              
                 audio.src      = '{{ (index .Attachment 0).Href }}'
                 audio.type     = '{{ (index .Attachment 0).MediaType }}'              
-                audio.style = "float: left; margin-right: 10px; margin-bottom: 10px; width: 250px;"
+                audio.style = "float: left; margin-right: 10px; margin-bottom: 10px; width: 150px;"
                 audio.innerText = 'Audio is not supported.'
                 media.appendChild(audio)                            
             }
@@ -146,7 +146,7 @@
                 video.muted    = 'muted'              
                 video.src      = '{{ (index .Attachment 0).Href }}'
                 video.type     = '{{ (index .Attachment 0).MediaType }}'              
-                video.style = "float: left; margin-right: 10px; margin-bottom: 10px; width: 250px;"
+                video.style = "float: left; margin-right: 10px; margin-bottom: 10px; width: 150px;"
                 video.innerText = 'Video is not supported.'
                 media.appendChild(video)                                          
             }                    

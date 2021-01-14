@@ -138,7 +138,7 @@ func checkSession(w http.ResponseWriter, r *http.Request) (interface{}, error){
 func main() {
 
 	if _, err := os.Stat("./public"); os.IsNotExist(err) {
-    os.Mkdir("./public", os.ModeDir)
+    os.Mkdir("./public", 0755)
 	}
 
 	initCache()
@@ -869,7 +869,7 @@ func IndexGet(w http.ResponseWriter, r *http.Request) {
 	
 	data := new(responseData)
 	data.Title = "Welcome to " + actor.PreferredUsername
-	data.Message = fmt.Sprintf("This is the client for the image board %s. The current version of the code running the server and client is volatile, expect a bumpy ride for the time being. Get the server and client code here https://github.com", Domain)
+	data.Message = fmt.Sprintf("This is the client for the image board %s. The current version of the code running the server and client is volatile, expect a bumpy ride for the time being. Get the server and client code here https://github.com/FChannel0", Domain)
 	data.Boards = boardCollection
 	data.Board.Name = ""
 	data.Key = *Key	
