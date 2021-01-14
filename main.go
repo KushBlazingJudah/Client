@@ -395,7 +395,8 @@ func main() {
 			adminData.Board.Name = actor.Name
 			adminData.Actor = actor.Id
 			adminData.Key = *Key
-			t.ExecuteTemplate(w, "layout", adminData)		
+			t.ExecuteTemplate(w, "layout", adminData)
+			
 		} else if admin || name == Domain {
 
 			t := template.Must(template.ParseFiles("./static/admin.html"))
@@ -1238,7 +1239,7 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 	domainURL = re.ReplaceAllString(domainURL, "")
 
-	resp, err := http.Get(Domain + "/getcaptcha")
+	resp, err := http.Get(domainURL + "/getcaptcha")
 
 	CheckError(err, "error getting captcha")
 
