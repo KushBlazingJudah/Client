@@ -80,6 +80,7 @@ type AdminPage struct {
 	Following []string
 	Followers []string
 	Reported []Report
+	Domain string
 }
 
 type Report struct {
@@ -383,6 +384,7 @@ func main() {
 			adminData.Following = following
 			adminData.Followers = followers
 			adminData.Reported  = reports
+			adminData.Domain = LocalDomain
 
 			var boardCollection []Board
 

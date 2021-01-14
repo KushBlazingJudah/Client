@@ -43,8 +43,9 @@
 <div id="reported" style="display: none;">
   <h4>Reported</h4>
   <ul style="display: inline-block; padding: 0; margin: 0;">
+    {{ $domain := .Domain }}
     {{ range .Reported }}
-    <li><a href="">{{ .ID }} </a> - <b>{{ .Count }}</b> <a href="http://192.168.0.9:4000/delete?id={{ .ID }}">[Remove Post]</a> <a href="http://192.168.0.9:4000/deleteattach?id={{ .ID }}">[Remove Attachment]</a> <a href="http://192.168.0.9:4000/report?id={{ .ID }}&close=1&board={{ $board.Name }}">[Close]</a></li>
+    <li><a href="">{{ .ID }} </a> - <b>{{ .Count }}</b> <a href="{{ $domain }}/delete?id={{ .ID }}">[Remove Post]</a> <a href="{{ $domain }}/deleteattach?id={{ .ID }}">[Remove Attachment]</a> <a href="{{ $domain }}/report?id={{ .ID }}&close=1&board={{ $board.Name }}">[Close]</a></li>
     {{ end }}
   </ul>            
 </div>
