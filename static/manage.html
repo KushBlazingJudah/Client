@@ -1,5 +1,7 @@
 {{ define "title" }}{{ .Title }}{{ end }}
-{{ define "header" }} {{ end }}
+{{ define "header" }}
+<script src="/static/js/posts.js"></script>
+{{ end }}
 {{ define "content" }}
 <div style="text-align: center; margin: 0 auto; width: 400px;">
   <h1>Manage /{{ .Board.Name }}/</h1>
@@ -43,9 +45,10 @@
 <div id="reported" style="display: none;">
   <h4>Reported</h4>
   <ul style="display: inline-block; padding: 0; margin: 0;">
+
     {{ $domain := .Domain }}
     {{ range .Reported }}
-    <li><a href="">{{ .ID }} </a> - <b>{{ .Count }}</b> <a href="{{ $domain }}/delete?id={{ .ID }}">[Remove Post]</a> <a href="{{ $domain }}/deleteattach?id={{ .ID }}">[Remove Attachment]</a> <a href="{{ $domain }}/report?id={{ .ID }}&close=1&board={{ $board.Name }}">[Close]</a></li>
+    <li><a id="rpost" post="{{ .ID }}" href=""></a> - <b>{{ .Count }}</b> <a href="http://{{ $domain }}/delete?id={{ .ID }}">[Remove Post]</a> <a href="http://{{ $domain }}/deleteattach?id={{ .ID }}">[Remove Attachment]</a> <a href="http://{{ $domain }}/report?id={{ .ID }}&close=1&board={{ $board.Name }}">[Close]</a></li>
     {{ end }}
   </ul>            
 </div>
@@ -65,5 +68,14 @@
 
       document.getElementById(element).style.display = "block";
   }
+
+  var reported = document.querySelectorAll('#rpost');
+  var reportedArray = [].slice.call(reported);
+
+  reportedArray.forEach(function(r, i){
+      var id = r.getAttribute("post")
+      r.innerText = "/" + {{ .Board.Name }} + "/" + shortURL("{{ .Actor }}", id)
+      r.href = "http://"+ {{ .Domain }} + "/" + {{ .Board.Name }} + "/" + shortURL("{{ .Actor }}", id)
+  })  
 </script>
 {{ end }}

@@ -26,23 +26,15 @@ import "github.com/gomodule/redigo/redis"
 import "github.com/satori/go.uuid"
 
 //The main instance that client is talking to
-var Domain = "https://server.fchan.xyz"
+var Domain = GetConfigValue("instance")
 
 //The client that the server is talking to
-var LocalDomain = "https://fchan.xyz"
+var LocalDomain = GetConfigValue("client")
 
 //client port
-var Port = ":4000"
+var Port = ":" + GetConfigValue("clientport")
 
 var Key *string = new(string)
-
-const (
-	host     = "localhost"
-	port     = 5432
-	user     = "postgres"
-	password = "password"
-	dbname   = "fchan_client"
-)
 
 var Boards *[]ObjectBase = new([]ObjectBase)
 
@@ -152,7 +144,6 @@ func main() {
 
 	defer db.Close()
 
-	fmt.Println("Client key: " + *Key)
 
 	actor := GetActor(Domain)
 
@@ -208,7 +199,6 @@ func main() {
 
 		}
 	})
-
 
 	http.HandleFunc("/post", func(w http.ResponseWriter, r *http.Request){
 
@@ -288,11 +278,11 @@ func main() {
 			obj = ParseOptions(r, obj)
 			for _, e := range obj.Option {
 				if(e == "noko" || e == "nokosage"){
-					http.Redirect(w, r, LocalDomain + "/" + r.FormValue("boardName") + "/" + string(body) , http.StatusMovedPermanently)
+					http.Redirect(w, r, "http://" + LocalDomain + "/" + r.FormValue("boardName") + "/" + string(body) , http.StatusMovedPermanently)
 					break
 				}
 			}
-			http.Redirect(w, r, LocalDomain + "/" + r.FormValue("boardName"), http.StatusMovedPermanently)			
+			http.Redirect(w, r, "http://" + LocalDomain + "/" + r.FormValue("boardName"), http.StatusMovedPermanently)			
 		}
 	})	
 
@@ -309,7 +299,7 @@ func main() {
 			actor.Outbox = Domain + "/outbox"
 		}
 
-		if id != actor.Id {
+		if id != StripTransferProtocol(actor.Id) && id != Domain {
 			t := template.Must(template.ParseFiles("./static/verify.html"))
 			t.Execute(w, "")
 			return
@@ -399,8 +389,9 @@ func main() {
 			
 		} else if admin || name == Domain {
 
-			t := template.Must(template.ParseFiles("./static/admin.html"))
-
+			t := template.Must(template.ParseFiles("./static/main.html", "./static/nadmin.html"))						
+			//t := template.Must(template.ParseFiles("./static/admin.html"))
+	
 			actor := GetActor(Domain)
 			follow := GetActorCollection(actor.Following).Items
 			follower := GetActorCollection(actor.Followers).Items
@@ -416,13 +407,16 @@ func main() {
 				followers = append(followers, e.Id)
 			}
 
-
-
 			var adminData AdminPage
 			adminData.Following = following
 			adminData.Followers = followers
 			adminData.Actor = actor.Id
 			adminData.Key = *Key
+
+			var boardCollection []Board
+
+			boardCollection = GetBoardCollection()
+			adminData.Boards = boardCollection			
 
 			id, _ := GetPasswordFromSession(r)
 			if Domain == id {
@@ -431,7 +425,8 @@ func main() {
 				adminData.Board.IsMod = false				
 			}							
 			
-			t.Execute(w, adminData)		
+			//			t.Execute(w, adminData)
+			t.ExecuteTemplate(w, "layout",  adminData)				
 		}
 	})
 
@@ -455,7 +450,7 @@ func main() {
 
 		newActorActivity.AtContext.Context = "https://www.w3.org/ns/activitystreams"
 		newActorActivity.Type = "New"
-		newActorActivity.Actor.Id = Domain
+		newActorActivity.Actor.Id = actor.Id
 		newActorActivity.Object.Actor = board
 		_, pass := GetPasswordFromSession(r)					
 		newActorActivity.Auth = pass
@@ -463,6 +458,8 @@ func main() {
 		enc, _ := json.Marshal(newActorActivity)
 
 		actor := GetActor(Domain)
+
+		fmt.Println(actor)
 
 		resp, err := http.Post(actor.Outbox , "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"", bytes.NewReader(enc))
 
@@ -587,7 +584,7 @@ func main() {
 	http.HandleFunc("/delete", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("id")
 
-		req, err := http.NewRequest("GET", Domain + "/delete?id=" + id, nil)
+		req, err := http.NewRequest("GET", "http://" + Domain + "/delete?id=" + id, nil)
 
 		CheckError(err, "error with deleting post")
 
@@ -609,7 +606,7 @@ func main() {
 	http.HandleFunc("/deleteattach", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("id")
 
-		req, err := http.NewRequest("GET", Domain + "/deleteattach?id=" + id, nil)
+		req, err := http.NewRequest("GET", "http://" + Domain + "/deleteattach?id=" + id, nil)
 
 		CheckError(err, "error with deleting attachment")
 
@@ -634,7 +631,7 @@ func main() {
 		board := r.URL.Query().Get("board")
 		close := r.URL.Query().Get("close")		
 
-		req, err := http.NewRequest("GET", Domain + "/report?id=" + id + "&close=" + close, nil)
+		req, err := http.NewRequest("GET", "http://" + Domain + "/report?id=" + id + "&close=" + close, nil)
 
 		CheckError(err, "error with reporting post")
 
@@ -665,7 +662,7 @@ func main() {
 
 			j, _ := json.Marshal(&verify)
 			
-			req, err := http.NewRequest("POST", Domain + "/verify", bytes.NewBuffer(j))
+			req, err := http.NewRequest("POST", "http://" + Domain + "/verify", bytes.NewBuffer(j))
 
 			CheckError(err, "error making verify req")
 
@@ -678,6 +675,8 @@ func main() {
 			rBody, _ := ioutil.ReadAll(resp.Body)
 
 			body := string(rBody)
+
+			body = StripTransferProtocol(body)
 
 			if(resp.StatusCode != 200) {
 				t := template.Must(template.ParseFiles("./static/verify.html"))
@@ -708,12 +707,21 @@ func main() {
 	})		
 
 	fmt.Println("Client for " + Domain + " running on port " + Port)
+
+	fmt.Println("Client key: " + *Key)
 	
 	http.ListenAndServe(Port, nil)
 	
 }
 
 func ConnectDB() *sql.DB {
+
+	host     := GetConfigValue("dbhost")
+	port, _  := strconv.Atoi(GetConfigValue("dbport"))
+	user     := GetConfigValue("dbuser")
+	password := GetConfigValue("dbpass")
+	dbname   := GetConfigValue("dbname")
+	
 	// connect to the database
 	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s " +
 		"dbname=%s sslmode=disable", host, port, user, password, dbname)
@@ -731,7 +739,9 @@ func ConnectDB() *sql.DB {
 
 func CheckError(e error, m string) error{
 	if e != nil {
+		fmt.Println()
 		fmt.Println(m)
+		fmt.Println()		
 		panic(e)
 	}
 
@@ -742,7 +752,9 @@ func GetActor(id string) Actor {
 
 	var respActor Actor
 
-	req, err := http.NewRequest("GET", id, nil)
+	id = StripTransferProtocol(id)
+
+	req, err := http.NewRequest("GET", "http://" + id, nil)
 
 	CheckError(err, "error with getting actor req")
 
@@ -878,6 +890,7 @@ func IndexGet(w http.ResponseWriter, r *http.Request) {
 	data.Key = *Key	
 
 	id, _ := GetPasswordFromSession(r)
+
 	if Domain == id {
 		data.Board.IsMod = true		
 	} else {
@@ -983,22 +996,32 @@ func WantToServe(actorName string) (Collection, bool) {
 func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	name := GetActorFromPath(r.URL.Path, "/")
 	actor := GetActorByName(name)
-	
-	t := template.Must(template.ParseFiles("./static/catalog.html"))
+
+	t := template.Must(template.ParseFiles("./static/main.html", "./static/ncatalog.html"))			
+	//	t := template.Must(template.ParseFiles("./static/catalog.html"))
 	returnData := new(PageData)
 
 	var mergeCollection Collection
 
 	actorCol := GetActorCollection(actor.Outbox)	
 
-	followCol := GetObjectsFromFollow(actor)
-
 	for _, e := range actorCol.OrderedItems {
 		mergeCollection.OrderedItems = append(mergeCollection.OrderedItems, e)
 	}
 
-	for _, e := range followCol {
-		mergeCollection.OrderedItems = append(mergeCollection.OrderedItems, e)
+	re := regexp.MustCompile("(https://|http://)?(www)?.+/")
+
+	domainURL := re.FindString(actor.Id)
+
+	re = regexp.MustCompile("/$")
+
+	domainURL = re.ReplaceAllString(domainURL, "")
+
+	if domainURL == Domain {
+		followCol := GetObjectsFromFollow(actor)	
+		for _, e := range followCol {
+			mergeCollection.OrderedItems = append(mergeCollection.OrderedItems, e)
+		}
 	}
 
 
@@ -1014,21 +1037,15 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	returnData.Board.Actor = actor.Id
 	returnData.Key = *Key
 	
-	id, _ := GetPasswordFromSession(r)															
+	id, _ := GetPasswordFromSession(r)
 
-	if actor.Id == id {
+
+	if StripTransferProtocol(actor.Id) == id || Domain == id {
 		returnData.Board.IsMod = true
 	} else {
 		returnData.Board.IsMod = false		
 	}	
 
-	re := regexp.MustCompile("(https://|http://)?(www)?.+/")
-
-	domainURL := re.FindString(actor.Id)
-
-	re = regexp.MustCompile("/$")
-
-	domainURL = re.ReplaceAllString(domainURL, "")
 
 	resp, err := http.Get(domainURL + "/getcaptcha")
 
@@ -1056,7 +1073,8 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 	returnData.Key = *Key
 
-	t.Execute(w, returnData)
+	//t.Execute(w, returnData)
+	t.ExecuteTemplate(w, "layout",  returnData)
 }
 
 func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Collection){
@@ -1081,7 +1099,7 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 	returnData.Board.Actor = actor.Id		
 	returnData.CurrentPage = page
 
-	if actor.Id == id {
+	if StripTransferProtocol(actor.Id) == id || Domain == id {
 		returnData.Board.IsMod = true
 	} else {
 		returnData.Board.IsMod = false		
@@ -1121,13 +1139,15 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 
 	var mergeCollection Collection
 
-	followCol := GetObjectsFromFollow(actor)
 	for _, e := range collection.OrderedItems {
 		mergeCollection.OrderedItems = append(mergeCollection.OrderedItems, e)
 	}
 
-	for _, e := range followCol {
-		mergeCollection.OrderedItems = append(mergeCollection.OrderedItems, e)			
+	if StripTransferProtocol(domainURL) == Domain {
+		followCol := GetObjectsFromFollow(actor)	
+		for _, e := range followCol {
+			mergeCollection.OrderedItems = append(mergeCollection.OrderedItems, e)			
+		}
 	}
 
 	DeleteRemovedPosts(db, &mergeCollection)
@@ -1225,7 +1245,7 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	returnData.Board.Actor = actor.Id
 	returnData.Board.Summary = actor.Summary
 
-	if actor.Id == id {
+	if StripTransferProtocol(actor.Id) == id  || Domain == id {
 		returnData.Board.IsMod = true
 	} else {
 		returnData.Board.IsMod = false		
@@ -1337,7 +1357,7 @@ func ParseCommentForReply(comment string) string {
 		str := strings.Replace(match[i][0], ">>", "", 1)
 		str = strings.Replace(str, "http://", "", 1)
 		str = strings.Replace(str, "https://", "", 1)		
-		str = "https://" + str
+		//		str = "https://" + str
 		links = append(links, str)
 	}
 
@@ -1348,13 +1368,13 @@ func ParseCommentForReply(comment string) string {
 			return links[0]
 		}
 	}
-
+	
 	return ""
 }
 
 func CheckValidActivity(id string) (Collection, bool) {
 
-	req, err := http.NewRequest("GET", id, nil)
+	req, err := http.NewRequest("GET", "http://" + id, nil)
 
 	if err != nil {
 		fmt.Println("error with request")
@@ -1570,6 +1590,33 @@ func RandomID(size int) string {
 	}
 	
 	return newID
+}
+
+func GetConfigValue(value string) string{
+	file, err := os.Open("config")
+
+	CheckError(err, "there was an error opening the config file")
+
+	defer file.Close()
+
+	lines := bufio.NewScanner(file)
+
+	for lines.Scan() {
+		line := strings.SplitN(lines.Text(), ":", 2)
+		if line[0] == value {
+			return line[1]
+		}
+	}
+
+	return ""
+}
+
+func StripTransferProtocol(value string) string {
+	re := regexp.MustCompile("(http://|https://)?(www.)?")
+
+	value = re.ReplaceAllString(value, "")
+
+	return value
 }
 
 

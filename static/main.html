@@ -1,6 +1,7 @@
 {{ define "layout" }}
 <!DOCTYPE html>
 <html>
+  <meta name="viewport" content="width=device-width, initial-scale=1">      
   <head>
     <title>{{ .Title }}</title>
     <style>
@@ -24,7 +25,6 @@
       <li style="display: inline;"><a href="{{.Location}}">{{.Name}}</a></li>
       {{end}}
     </ul>
-
     {{ if .Board.IsMod }}
     <span style="float: right;"><a href="/{{ .Key }}/{{ .Board.Name }}">[Manage Board]</a></span>
     {{ end }}    

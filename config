@@ -1,0 +1,8 @@
+instance:server.fchan.xyz
+client:fchan.xyz
+clientport:4000
+dbhost:localhost
+dbport:5432
+dbname:fchan_client
+dbuser:postgres
+dbpass:password

@@ -144,12 +144,10 @@
           {{ if .Replies.OrderedItems }}
           {{ range .Replies.OrderedItems }}
           <span id="{{ $parentId }}-replyto-{{.Id}}"></span>
-          <script>
-            document.getElementById("{{ $parentId }}-replyto-{{.Id}}").innerHTML = "<a href='/{{ $board.Name }}/" + shortURL("{{ $board.Actor }}", "{{ $opId }}") + "#" + shortURL("{{ $board.Actor }}", "{{ .Id }}") + "'> >>" + shortURL("{{ $board.Actor }}", "{{ .Id }}") + "</a>";
-                                                                                                                                                                                                                                                                                                           </script>
-          {{ end }}
-          {{ end }}
-          <p id="{{ .Id }}-content" style="white-space: pre-wrap; margin: 10px 30px 10px 30px;">{{.Content}}</p>
+          <script>document.getElementById("{{ $parentId }}-replyto-{{.Id}}").innerHTML = "<a href='/{{ $board.Name }}/" + shortURL("{{ $board.Actor }}", "{{ $opId }}") + "#" + shortURL("{{ $board.Actor }}", "{{ .Id }}") + "'> >>" + shortURL("{{ $board.Actor }}", "{{ .Id }}") + "</a>";</script>
+                                                                                                                                                                                                                                                                                            {{ end }}
+                                                                                                                                                                                                                                                                                            {{ end }}
+                                                                                                                                                                                                                                                                                            <p id="{{ .Id }}-content" style="white-space: pre-wrap; margin: 10px 30px 10px 30px;">{{.Content}}</p>
         </div>
       </div>
     </div>
@@ -215,7 +213,6 @@
     </div>
   </form>
 </div>
-
 {{ end }}
 
 {{ define "script" }}
