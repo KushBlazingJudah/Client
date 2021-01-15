@@ -48,7 +48,7 @@
 
     {{ $domain := .Domain }}
     {{ range .Reported }}
-    <li><a id="rpost" post="{{ .ID }}" href=""></a> - <b>{{ .Count }}</b> <a href="http://{{ $domain }}/delete?id={{ .ID }}">[Remove Post]</a> <a href="http://{{ $domain }}/deleteattach?id={{ .ID }}">[Remove Attachment]</a> <a href="http://{{ $domain }}/report?id={{ .ID }}&close=1&board={{ $board.Name }}">[Close]</a></li>
+    <li><a id="rpost" post="{{ .ID }}" href=""></a> - <b>{{ .Count }}</b> <a href="{{$board.TP}}{{ $domain }}/delete?id={{ .ID }}">[Remove Post]</a> <a href="{{$board.TP}}{{ $domain }}/deleteattach?id={{ .ID }}">[Remove Attachment]</a> <a href="{{$board.TP}}{{ $domain }}/report?id={{ .ID }}&close=1&board={{ $board.Name }}">[Close]</a></li>
     {{ end }}
   </ul>            
 </div>
@@ -75,7 +75,7 @@
   reportedArray.forEach(function(r, i){
       var id = r.getAttribute("post")
       r.innerText = "/" + {{ .Board.Name }} + "/" + shortURL("{{ .Actor }}", id)
-      r.href = "http://"+ {{ .Domain }} + "/" + {{ .Board.Name }} + "/" + shortURL("{{ .Actor }}", id)
+      r.href = {{ .Board.TP }} + "" + {{ .Domain }} + "/" + {{ .Board.Name }} + "/" + shortURL("{{ .Actor }}", id)
   })  
 </script>
 {{ end }}

@@ -34,6 +34,8 @@ var LocalDomain = GetConfigValue("client")
 //client port
 var Port = ":" + GetConfigValue("clientport")
 
+var TP = GetInstanceTP(Domain)
+
 var Key *string = new(string)
 
 var Boards *[]ObjectBase = new([]ObjectBase)
@@ -50,6 +52,7 @@ type Board struct{
 	Captcha string
 	CaptchaCode string
 	IsMod bool
+	TP string
 }
 
 type PageData struct {
@@ -143,7 +146,6 @@ func main() {
 	db := ConnectDB();
 
 	defer db.Close()
-
 
 	actor := GetActor(Domain)
 
@@ -278,11 +280,11 @@ func main() {
 			obj = ParseOptions(r, obj)
 			for _, e := range obj.Option {
 				if(e == "noko" || e == "nokosage"){
-					http.Redirect(w, r, "http://" + LocalDomain + "/" + r.FormValue("boardName") + "/" + string(body) , http.StatusMovedPermanently)
+					http.Redirect(w, r, TP + "" + LocalDomain + "/" + r.FormValue("boardName") + "/" + string(body) , http.StatusMovedPermanently)
 					break
 				}
 			}
-			http.Redirect(w, r, "http://" + LocalDomain + "/" + r.FormValue("boardName"), http.StatusMovedPermanently)			
+			http.Redirect(w, r, TP + "" + LocalDomain + "/" + r.FormValue("boardName"), http.StatusMovedPermanently)			
 		}
 	})	
 
@@ -385,6 +387,7 @@ func main() {
 			adminData.Board.Name = actor.Name
 			adminData.Actor = actor.Id
 			adminData.Key = *Key
+			adminData.Board.TP = TP
 			t.ExecuteTemplate(w, "layout", adminData)
 			
 		} else if admin || name == Domain {
@@ -584,7 +587,7 @@ func main() {
 	http.HandleFunc("/delete", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("id")
 
-		req, err := http.NewRequest("GET", "http://" + Domain + "/delete?id=" + id, nil)
+		req, err := http.NewRequest("GET", TP + "" + Domain + "/delete?id=" + id, nil)
 
 		CheckError(err, "error with deleting post")
 
@@ -606,7 +609,7 @@ func main() {
 	http.HandleFunc("/deleteattach", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("id")
 
-		req, err := http.NewRequest("GET", "http://" + Domain + "/deleteattach?id=" + id, nil)
+		req, err := http.NewRequest("GET", TP + "" + Domain + "/deleteattach?id=" + id, nil)
 
 		CheckError(err, "error with deleting attachment")
 
@@ -631,7 +634,7 @@ func main() {
 		board := r.URL.Query().Get("board")
 		close := r.URL.Query().Get("close")		
 
-		req, err := http.NewRequest("GET", "http://" + Domain + "/report?id=" + id + "&close=" + close, nil)
+		req, err := http.NewRequest("GET", TP + "" + Domain + "/report?id=" + id + "&close=" + close, nil)
 
 		CheckError(err, "error with reporting post")
 
@@ -662,7 +665,7 @@ func main() {
 
 			j, _ := json.Marshal(&verify)
 			
-			req, err := http.NewRequest("POST", "http://" + Domain + "/verify", bytes.NewBuffer(j))
+			req, err := http.NewRequest("POST", TP + "" + Domain + "/verify", bytes.NewBuffer(j))
 
 			CheckError(err, "error making verify req")
 
@@ -1374,7 +1377,7 @@ func ParseCommentForReply(comment string) string {
 
 func CheckValidActivity(id string) (Collection, bool) {
 
-	req, err := http.NewRequest("GET", "http://" + id, nil)
+	req, err := http.NewRequest("GET", TP + "" + id, nil)
 
 	if err != nil {
 		fmt.Println("error with request")
@@ -1619,6 +1622,14 @@ func StripTransferProtocol(value string) string {
 	return value
 }
 
+func GetInstanceTP(instance  string) string {
+	actor := GetActor(Domain)
+
+	re := regexp.MustCompile("(https://|http://)")
+
+	return re.FindString(actor.Id)
+}
+
 
 type ObjectBaseSortDesc []ObjectBase
 func (a ObjectBaseSortDesc) Len() int { return len(a) }
@@ -1629,3 +1640,4 @@ type ObjectBaseSortAsc []ObjectBase
 func (a ObjectBaseSortAsc) Len() int { return len(a) }
 func (a ObjectBaseSortAsc) Less(i, j int) bool { return a[i].Published < a[j].Published }
 func (a ObjectBaseSortAsc) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+
