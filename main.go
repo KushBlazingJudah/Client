@@ -1186,7 +1186,6 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 
 	for i, e := range returnData.Posts {
 		var replies []ObjectBase
-		returnData.Posts[i].Replies.TotalItems = 100
 		for i := 0; i < 5; i++ {
 			cur := len(e.Replies.OrderedItems) - i - 1
 			if cur > -1 {
