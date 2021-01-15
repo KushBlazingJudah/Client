@@ -208,8 +208,8 @@ func main() {
 
 		file, header, _ := r.FormFile("file")
 
-		if(file != nil && header.Size > (5 << 20)){
-			w.Write([]byte("5MB max file size"))
+		if(file != nil && header.Size > (7 << 20)){
+			w.Write([]byte("7MB max file size"))
 			return
 		}
 
@@ -462,8 +462,6 @@ func main() {
 
 		actor := GetActor(Domain)
 
-		fmt.Println(actor)
-
 		resp, err := http.Post(actor.Outbox , "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"", bytes.NewReader(enc))
 
 		CheckError(err, "error with add board follow resp")
@@ -698,7 +696,7 @@ func main() {
 				http.SetCookie(w, &http.Cookie{
 					Name:    "session_token",
 					Value:   sessionToken.String(),
-					Expires: time.Now().Add(60 * 60 * time.Second),
+					Expires: time.Now().Add(60 * 60 * 24 * time.Second),
 				})
 
 				http.Redirect(w, r, "/", http.StatusSeeOther)				
@@ -1001,7 +999,7 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	actor := GetActorByName(name)
 
 	t := template.Must(template.ParseFiles("./static/main.html", "./static/ncatalog.html"))			
-	//	t := template.Must(template.ParseFiles("./static/catalog.html"))
+
 	returnData := new(PageData)
 
 	var mergeCollection Collection
@@ -1020,9 +1018,12 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 	domainURL = re.ReplaceAllString(domainURL, "")
 
-	if domainURL == Domain {
+	d := StripTransferProtocol(domainURL)
+
+	if d == Domain {
 		followCol := GetObjectsFromFollow(actor)	
 		for _, e := range followCol {
+
 			mergeCollection.OrderedItems = append(mergeCollection.OrderedItems, e)
 		}
 	}
@@ -1049,7 +1050,6 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 		returnData.Board.IsMod = false		
 	}	
 
-
 	resp, err := http.Get(domainURL + "/getcaptcha")
 
 	CheckError(err, "error getting captcha")
@@ -1068,7 +1068,7 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	
 	returnData.Board.CaptchaCode = code	
 
-	returnData.Title = "FChan - /" + actor.Name + "/ - " + actor.PreferredUsername
+	returnData.Title = "/" + actor.Name + "/ - " + actor.PreferredUsername
 
 	returnData.Boards = GetBoardCollection()
 
@@ -1076,7 +1076,6 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 	returnData.Key = *Key
 
-	//t.Execute(w, returnData)
 	t.ExecuteTemplate(w, "layout",  returnData)
 }
 
@@ -1161,7 +1160,7 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 	for _, e := range mergeCollection.OrderedItems {
 		sort.Sort(ObjectBaseSortAsc(e.Replies.OrderedItems))
 	}
-	
+
 	for _, e := range *Boards {
 		board := new(Board)		
 		boardActor := GetActor(e.Id)

@@ -9,6 +9,7 @@ function shortURL(actorName, url)
     var check = url.replace(actorName + "/", "")
     re = /.+\//g;
     temp = re.exec(url)
+
     if(temp[0] == actorName + "/")
     {
         var short = url.replace("https://", "");
@@ -105,7 +106,8 @@ function convertContent(actorName, content, opid)
             {
                 isOP = " (OP)";
             }
-            newContent = newContent.replace(quote, '<a title="' + link +  '" href="' + getBoardId(opid)  +  '#' + shortURL(actorName, link) + '"style="color:#af0a0f;">>>' + shortURL(actorName, link)  + isOP + '</a>');
+            
+            newContent = newContent.replace(quote, '<a title="' + link +  '" href="'+ getBoardId(actorName) + "/" + shortURL(actorName, opid)  +  '#' + shortURL(actorName, link) + '"style="color:#af0a0f;">>>' + shortURL(actorName, link)  + isOP + '</a>');
 
         })            
     }

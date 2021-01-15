@@ -49,7 +49,7 @@
     <a href="/deleteattach?id={{ .Id }}">[Delete Attachment]</a>
     {{ end }}        
     <a id="{{ .Id }}-anchor" href="/{{ $board.Name }}/">
-      <div id="media-{{ .Id }}"></div>
+      <div id="media-{{ .Id }}" style="width:180px;"></div>
       <script>
         media = document.getElementById("media-{{ .Id }}")
         if(getMIMEType({{ (index .Attachment 0).MediaType }}) == "image"){
