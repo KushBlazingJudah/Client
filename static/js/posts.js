@@ -1,3 +1,21 @@
+function newpost()
+{
+    var el = document.getElementById("newpostbtn")
+    var state = el.getAttribute("state")
+    if(state = "0")
+    {
+        el.style="display:none;"
+        el.setAttribute("state", "1")
+        document.getElementById("newpost").style = "display: block;";        
+    }
+    else
+    {
+        el.style="display:block;"
+        el.setAttribute("state", "0")
+        document.getElementById("newpost").style = "display: hidden;";        
+    }
+}
+
 function getMIMEType(type)
 {
     re = /\/.+/g
@@ -70,10 +88,10 @@ function shortImg(url)
 
 function convertSize(size)
 {
-    var convert = size >> 10;
+    var convert = size / 1024.0;
     if(convert > 1024)
     {
-        convert = convert >> 10
+        convert = convert / 1024.0
         convert = convert.toFixed(2) + " MB"
     }
     else

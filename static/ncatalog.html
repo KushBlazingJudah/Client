@@ -6,8 +6,9 @@
 {{ $board := .Board }}
 <div style="margin: 0 auto; width: 400px; margin-bottom: 100px;">
   <h1 style="color: #af0a0f;">/{{ $board.Name }}/ - {{ $board.PrefName }}</h1>
-  <p>{{ $board.Summary }}</p>  
-  <!--      <form id="new-post" action="{{ $board.To }}" method="post" enctype="multipart/form-data"> -->
+  <p>{{ $board.Summary }}</p>
+  <h3 id="newpostbtn"  state="0" style="text-align: center; margin-top:80px;"><a href="javascript:newpost()">[Start a New Thread]</a></h3>  
+  <div id="newpost" style="display: none;">    
     <form id="new-post" action="/post" method="post" enctype="multipart/form-data">        
       <label for="name">Name:</label><br>
       <input type="text" id="name" name="name" placeholder="Anonymous"><br>
@@ -27,6 +28,7 @@
         <img src="{{ $board.Captcha }}">
       </div>
     </form>
+  </div>
 </div>
 
 <hr>

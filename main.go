@@ -1039,6 +1039,7 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	returnData.Board.InReplyTo = ""
 	returnData.Board.To = actor.Outbox
 	returnData.Board.Actor = actor.Id
+	returnData.Board.Summary = actor.Summary
 	returnData.Key = *Key
 	
 	id, _ := GetPasswordFromSession(r)
