@@ -1,7 +1,7 @@
 {{ define "top" }}
 <div style="margin: 0 auto; width: 400px; margin-bottom: 100px;">
   <h1 style="text-align: center; color: #af0a0f;">/{{ .Board.Name }}/ - {{ .Board.PrefName }}</h1>
-  <p style="text-align: justify;">{{ .Board.Summary }}</p>
+  <p style="text-align: center;">{{ .Board.Summary }}</p>
   {{ $len := len .Posts }}
   {{ if gt $len 1 }}
   <h3 id="newpostbtn"  state="0" style="text-align: center; margin-top: 80px;"><a href="javascript:newpost()">[Start a New Thread]</a></h3>
