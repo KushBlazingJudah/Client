@@ -32,7 +32,9 @@
 {{ end }}
 
 {{ define "script" }}
+<script src="/static/js/footerscript.js"></script>
 <script>
+  viewLink("{{ .Board.Name }}", "{{ .Board.Actor }}")
 
 </script>    
 {{ end }}

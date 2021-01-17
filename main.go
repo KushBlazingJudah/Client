@@ -759,6 +759,7 @@ func GetActor(id string) Actor {
 	resp, err := http.DefaultClient.Do(req)
 
 	if err != nil {
+		fmt.Println("could not get actor from " + id)		
 		return respActor
 	}
 

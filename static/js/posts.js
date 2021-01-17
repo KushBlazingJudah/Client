@@ -130,15 +130,7 @@ function convertContent(actorName, content, opid)
         })            
     }
 
-    re =  /^>.+/gm;
-
-    match = newContent.match(re);
-    if(match)
-    {
-        match.forEach(function(quote, i) {
-            newContent = newContent.replace(quote, '<span style="color: green;">' + quote + '</span>');
-        })
-    }
+    newContent = newContent.replace(quote, '<span style="color: green;">' + quote + '</span>');
     
     return newContent
 }
