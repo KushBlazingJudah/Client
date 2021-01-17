@@ -23,7 +23,7 @@ import "os/exec"
 import "math/rand"
 
 import "github.com/gomodule/redigo/redis"
-import "github.com/satori/go.uuid"
+import "github.com/gofrs/uuid"
 
 //The main instance that client is talking to
 var Domain = GetConfigValue("instance")
@@ -51,12 +51,14 @@ type Board struct{
 	RedirectTo string
 	Captcha string
 	CaptchaCode string
-	IsMod bool
+	ModCred string
+	Domain string
 	TP string
 }
 
 type PageData struct {
 	Title string
+	Message string	
 	Board Board
 	Pages []int
 	CurrentPage int
@@ -213,9 +215,11 @@ func main() {
 			return
 		}
 
-		if(r.FormValue("comment") == "" && r.FormValue("subject") == ""){
-			w.Write([]byte("Comment or Subject required"))
-			return
+		if(r.FormValue("inReplyTo") == "" || file == nil) {
+			if(r.FormValue("comment") == "" && r.FormValue("subject") == ""){
+				w.Write([]byte("Comment or Subject required"))
+				return
+			}
 		}
 
 		if(r.FormValue("captcha") == "") {
@@ -393,7 +397,6 @@ func main() {
 		} else if admin || name == Domain {
 
 			t := template.Must(template.ParseFiles("./static/main.html", "./static/nadmin.html"))						
-			//t := template.Must(template.ParseFiles("./static/admin.html"))
 	
 			actor := GetActor(Domain)
 			follow := GetActorCollection(actor.Following).Items
@@ -413,22 +416,16 @@ func main() {
 			var adminData AdminPage
 			adminData.Following = following
 			adminData.Followers = followers
-			adminData.Actor = actor.Id
+			adminData.Actor = StripTransferProtocol(actor.Id)
 			adminData.Key = *Key
+			adminData.Domain = Domain
+			adminData.Board.ModCred,_ = GetPasswordFromSession(r)
 
 			var boardCollection []Board
 
 			boardCollection = GetBoardCollection()
 			adminData.Boards = boardCollection			
 
-			id, _ := GetPasswordFromSession(r)
-			if Domain == id {
-				adminData.Board.IsMod = true		
-			} else {
-				adminData.Board.IsMod = false				
-			}							
-			
-			//			t.Execute(w, adminData)
 			t.ExecuteTemplate(w, "layout",  adminData)				
 		}
 	})
@@ -761,7 +758,9 @@ func GetActor(id string) Actor {
 
 	resp, err := http.DefaultClient.Do(req)
 
-	CheckError(err, "error with getting actor resp")
+	if err != nil {
+		return respActor
+	}
 
 	defer resp.Body.Close()
 
@@ -783,7 +782,9 @@ func GetActorCollection(collection string) Collection {
 
 	resp, err := http.DefaultClient.Do(req)
 
-	CheckError(err, "error with getting actor collection resp " + collection)
+	if err != nil {
+		return nCollection
+	}
 
 	if resp.StatusCode == 200 {
 
@@ -856,47 +857,25 @@ func IndexGet(w http.ResponseWriter, r *http.Request) {
 
 	actor := GetActor(Domain)
 
-	type Board struct{
-		Name string
-		PrefName string
-		InReplyTo string
-		Location string
-		IsMod bool
-	}			
-	
-	type responseData struct {
-		Title string
-		Message string
-		Boards []Board
-		Board Board
-		Key string
-	}
-
 	var boardCollection []Board
 
 	for _, e := range *Boards {
-		board := new(Board)		
+		var board Board
 		boardActor := GetActor(e.Id)
 		board.Name = "/" + boardActor.Name + "/"
 		board.PrefName = boardActor.PreferredUsername
 		board.Location = "/" + boardActor.Name
-		boardCollection = append(boardCollection, *board)
+		boardCollection = append(boardCollection, board)
 	}
 	
-	data := new(responseData)
+	var data PageData
 	data.Title = "Welcome to " + actor.PreferredUsername
 	data.Message = fmt.Sprintf("This is the client for the image board %s. The current version of the code running the server and client is volatile, expect a bumpy ride for the time being. Get the server and client code here https://github.com/FChannel0", Domain)
 	data.Boards = boardCollection
 	data.Board.Name = ""
-	data.Key = *Key	
-
-	id, _ := GetPasswordFromSession(r)
-
-	if Domain == id {
-		data.Board.IsMod = true		
-	} else {
-		data.Board.IsMod = false				
-	}	
+	data.Key = *Key
+	data.Board.Domain = Domain
+	data.Board.ModCred, _ = GetPasswordFromSession(r)
 	
 	t.ExecuteTemplate(w, "layout",  data)	
 }
@@ -998,7 +977,7 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	name := GetActorFromPath(r.URL.Path, "/")
 	actor := GetActorByName(name)
 
-	t := template.Must(template.ParseFiles("./static/main.html", "./static/ncatalog.html"))			
+	t := template.Must(template.ParseFiles("./static/main.html", "./static/ncatalog.html", "./static/top.html"))			
 
 	returnData := new(PageData)
 
@@ -1038,18 +1017,11 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	returnData.Board.PrefName = actor.PreferredUsername
 	returnData.Board.InReplyTo = ""
 	returnData.Board.To = actor.Outbox
-	returnData.Board.Actor = actor.Id
+	returnData.Board.Actor = StripTransferProtocol(actor.Id)
 	returnData.Board.Summary = actor.Summary
+	returnData.Board.ModCred, _ = GetPasswordFromSession(r)
+	returnData.Board.Domain = Domain
 	returnData.Key = *Key
-	
-	id, _ := GetPasswordFromSession(r)
-
-
-	if StripTransferProtocol(actor.Id) == id || Domain == id {
-		returnData.Board.IsMod = true
-	} else {
-		returnData.Board.IsMod = false		
-	}	
 
 	resp, err := http.Get(domainURL + "/getcaptcha")
 
@@ -1082,9 +1054,7 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Collection){
 
-	t := template.Must(template.ParseFiles("./static/main.html", "./static/nposts.html"))	
-
-	id, _ := GetPasswordFromSession(r)														
+	t := template.Must(template.ParseFiles("./static/main.html", "./static/nposts.html", "./static/top.html", "./static/bottom.html", "./static/posts.html"))	
 
 	actor := GetActor(collection.Actor)	
 	
@@ -1099,14 +1069,10 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 	returnData.Board.Summary = actor.Summary
 	returnData.Board.InReplyTo = ""
 	returnData.Board.To = actor.Outbox
-	returnData.Board.Actor = actor.Id		
+	returnData.Board.Actor = StripTransferProtocol(actor.Id)
+	returnData.Board.ModCred, _ = GetPasswordFromSession(r)
+	returnData.Board.Domain = Domain
 	returnData.CurrentPage = page
-
-	if StripTransferProtocol(actor.Id) == id || Domain == id {
-		returnData.Board.IsMod = true
-	} else {
-		returnData.Board.IsMod = false		
-	}
 
 	re := regexp.MustCompile("(https://|http://)?(www)?.+/")
 
@@ -1219,19 +1185,7 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 
 func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
-	t := template.Must(template.ParseFiles("./static/main.html", "./static/npost.html"))
-	
-	id, _ := GetPasswordFromSession(r)															
-
-	type SinglePageData struct {
-		Title string
-		Board Board
-		Boards []Board
-		Posts ObjectBase
-		Key string
-		IsMod bool
-	}
-
+	t := template.Must(template.ParseFiles("./static/main.html", "./static/npost.html", "./static/top.html", "./static/bottom.html", "./static/posts.html"))		
 	path := r.URL.Path
 	name := GetActorFromPath(path, "/")
 	re := regexp.MustCompile("\\w+$")
@@ -1241,19 +1195,15 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 	inReplyTo := actor.Id + "/" + postId
 
-	returnData := new(SinglePageData)
+	var returnData PageData
 
 	returnData.Board.Name = actor.Name
 	returnData.Board.PrefName = actor.PreferredUsername
 	returnData.Board.To = actor.Outbox
-	returnData.Board.Actor = actor.Id
+	returnData.Board.Actor = StripTransferProtocol(actor.Id)
 	returnData.Board.Summary = actor.Summary
-
-	if StripTransferProtocol(actor.Id) == id  || Domain == id {
-		returnData.Board.IsMod = true
-	} else {
-		returnData.Board.IsMod = false		
-	}	
+	returnData.Board.ModCred, _ = GetPasswordFromSession(r)
+	returnData.Board.Domain = Domain 
 
 	re = regexp.MustCompile("(https://|http://)?(www)?.+/")
 
@@ -1302,9 +1252,9 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 		followCollection.OrderedItems = DeleteTombstonePosts(&followCollection)
 		
 		returnData.Board.InReplyTo = followCollection.OrderedItems[0].Id
-		returnData.Posts = followCollection.OrderedItems[0]
+		returnData.Posts = append(returnData.Posts, followCollection.OrderedItems[0])
 
-		sort.Sort(ObjectBaseSortAsc(returnData.Posts.Replies.OrderedItems))				
+		sort.Sort(ObjectBaseSortAsc(returnData.Posts[0].Replies.OrderedItems))				
 	} else {
 		returnData.Board.InReplyTo = inReplyTo
 
@@ -1313,8 +1263,8 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 		DeleteRemovedPosts(db, &collection)
 		collection.OrderedItems = DeleteTombstonePosts(&collection)
 		
-		returnData.Posts = collection.OrderedItems[0]
-		sort.Sort(ObjectBaseSortAsc(returnData.Posts.Replies.OrderedItems))						
+		returnData.Posts = append(returnData.Posts, collection.OrderedItems[0])
+		sort.Sort(ObjectBaseSortAsc(returnData.Posts[0].Replies.OrderedItems))						
 	}
 
 	t.ExecuteTemplate(w, "layout",  returnData)			

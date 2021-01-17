@@ -28,7 +28,7 @@ function shortURL(actorName, url)
     re = /.+\//g;
     temp = re.exec(url)
 
-    if(temp[0] == actorName + "/")
+    if(stripTransferProtocol(temp[0]) == actorName + "/")
     {
         var short = url.replace("https://", "");
         short = short.replace("http://", "");
@@ -104,10 +104,10 @@ function convertSize(size)
 
 function getBoardId(url)
 {
-    var re = /\/([^/\n]+)(.+)?/gm;
+    console.log(url)        
+    var re = /\/([^/\n]+)(.+)?/gm
     var matches = re.exec(url);
-    var board = matches[2].replace('/\/.+?/','')
-    return board
+    return matches[1]
 }
 
 function convertContent(actorName, content, opid)
@@ -125,7 +125,7 @@ function convertContent(actorName, content, opid)
                 isOP = " (OP)";
             }
             
-            newContent = newContent.replace(quote, '<a title="' + link +  '" href="'+ getBoardId(actorName) + "/" + shortURL(actorName, opid)  +  '#' + shortURL(actorName, link) + '"style="color:#af0a0f;">>>' + shortURL(actorName, link)  + isOP + '</a>');
+            newContent = newContent.replace(quote, '<a title="' + link +  '" href="/'+ getBoardId(actorName) + "/" + shortURL(actorName, opid)  +  '#' + shortURL(actorName, link) + '"style="color:#af0a0f;">>>' + shortURL(actorName, link)  + isOP + '</a>');
 
         })            
     }
@@ -166,8 +166,6 @@ function next(actorName, totalPage, page)
     window.location.href = "/" + actorName + "/" + next;
 }
 
-
-
 function quote(actorName, opid, id)
 {
     var box = document.getElementById("reply-box");
@@ -187,8 +185,8 @@ function quote(actorName, opid, id)
     header.innerText = "Replying to Thread No. " + shortURL(actorName, opid);
     inReplyTo.value = opid;
 
-
-    comment.value += ">>" + id + "\n";
+    if (opid != id)
+        comment.value += ">>" + id + "\n";
 
     dragElement(header);            
 
@@ -229,3 +227,10 @@ function dragElement(elmnt) {
         document.onmousemove = null;
     }
 }
+
+function stripTransferProtocol(value){
+    var re = /(https:\/\/|http:\/\/)?(www.)?/
+
+    return value.replace(re, "")
+}
+

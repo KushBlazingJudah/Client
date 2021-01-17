@@ -1,5 +1,6 @@
 {{ define "title" }}{{ .Title }}{{ end }}
 {{ define "header" }} {{ end }}
+{{ define "top" }}{{ end }}
 {{ define "content" }}
 <div style="margin: 0 auto; width: 400px;">
   <h3>Add Board</h3>
@@ -22,7 +23,6 @@
     <!-- <li style="display: inline-block;"><a href="javascript:show('followers')">Followers</a></li> -->
     <li style="display: inline-block;"><a href="javascript:show('reported')">Reported</a></li>            
   </ul>
-
 </div>    
 
 <div id="following">
@@ -56,6 +56,7 @@
   </ul>            
 </div>
 {{ end }}
+{{ define "bottom" }}{{ end }}
 
 {{ define "script" }}
 <script>

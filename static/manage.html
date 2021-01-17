@@ -2,6 +2,7 @@
 {{ define "header" }}
 <script src="/static/js/posts.js"></script>
 {{ end }}
+{{ define "top" }}{{ end }}
 {{ define "content" }}
 <div style="text-align: center; margin: 0 auto; width: 400px;">
   <h1>Manage /{{ .Board.Name }}/</h1>
@@ -53,6 +54,7 @@
   </ul>            
 </div>
 {{ end }}
+{{ define "bottom" }}{{ end }}
 
 {{ define "script" }}
 <script>

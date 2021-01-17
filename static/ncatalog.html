@@ -4,33 +4,6 @@
 
 {{ define "content" }}
 {{ $board := .Board }}
-<div style="margin: 0 auto; width: 400px; margin-bottom: 100px;">
-  <h1 style="color: #af0a0f;">/{{ $board.Name }}/ - {{ $board.PrefName }}</h1>
-  <p>{{ $board.Summary }}</p>
-  <h3 id="newpostbtn"  state="0" style="text-align: center; margin-top:80px;"><a href="javascript:newpost()">[Start a New Thread]</a></h3>  
-  <div id="newpost" style="display: none;">    
-    <form id="new-post" action="/post" method="post" enctype="multipart/form-data">        
-      <label for="name">Name:</label><br>
-      <input type="text" id="name" name="name" placeholder="Anonymous"><br>
-      <label for="options">Options:</label><br>
-      <input type="text" id="options" name="options"><input type="submit" value="Post"><br>
-      <label for="comment">Comment:</label><br>
-      <textarea rows="10" cols="50" id="comment" name="comment"></textarea><br>
-      <input type="hidden" id="inReplyTo" name="inReplyTo" value="{{ $board.InReplyTo }}">
-      <input type="hidden" id="sendTo" name="sendTo" value="{{ $board.To }}">
-      <input type="hidden" id="boardName" name="boardName" value="{{ $board.Name }}">
-      <input type="hidden" id="captchaCode" name="captchaCode" value="{{ $board.CaptchaCode }}">                
-      <input type="file" id="file" name="file" required><br><br>
-      <label stye="display: inline-block;" for="captcha">Captcha:</label>
-      <br>              
-      <input style="display: inline-block;"  type="text" id="captcha" name="captcha"><br>
-      <div style="height: 65px;">
-        <img src="{{ $board.Captcha }}">
-      </div>
-    </form>
-  </div>
-</div>
-
 <hr>
 <ul style="margin: 0; padding: 0; display: inline">
   <li style="display: inline"><a href="/{{ $board.Name }}">[Return]</a></li>
@@ -42,12 +15,12 @@
 
 <div style="padding: 10px; text-align: center;">
   {{ range .Posts }}
-  <div style="overflow: hidden; vertical-align: top; margin: 0 auto; display: inline-block; width: 180px; max-height: 320px; margin-bottom: 10px;">
-    {{ if $board.IsMod }}        
+  <div style="overflow: hidden; vertical-align: top; padding-right: 24px; padding-bottom: 24px; display: inline-block; width: 180px; max-height: 320px; margin-bottom: 10px;">
+    {{ if eq $board.ModCred $board.Domain $board.Actor }}              
     <a href="/delete?id={{ .Id }}">[Delete Post]</a>
     {{ end }}
     {{ if .Attachment }}
-    {{ if $board.IsMod }}        
+    {{ if eq $board.ModCred $board.Domain $board.Actor }}                  
     <a href="/deleteattach?id={{ .Id }}">[Delete Attachment]</a>
     {{ end }}        
     <a id="{{ .Id }}-anchor" href="/{{ $board.Name }}/">
@@ -56,7 +29,7 @@
         media = document.getElementById("media-{{ .Id }}")
         if(getMIMEType({{ (index .Attachment 0).MediaType }}) == "image"){
             var img = document.createElement("img");
-            img.style = "float: left; max-width: 180px; max-height: 180px; cursor: move;"
+            img.style = "max-width: 180px; max-height: 180px; cursor: move;"
             img.setAttribute("id", "img")
             img.setAttribute("main", "1")
             img.setAttribute("src", "{{ (index .Attachment 0).Href }}")
@@ -66,10 +39,10 @@
         if(getMIMEType({{ (index .Attachment 0).MediaType }}) == "audio"){
             var audio = document.createElement("audio")
             audio.controls = 'controls'
-            audio.muted    = 'muted'              
+            audio.preload    = 'none'              
             audio.src      = '{{ (index .Attachment 0).Href }}'
             audio.type     = '{{ (index .Attachment 0).MediaType }}'              
-            audio.style = "float: left; margin-right: 10px; margin-bottom: 10px; width: 180px;"
+            audio.style = "margin-right: 10px; margin-bottom: 10px; width: 180px;"
             audio.innerText = 'Audio is not supported.'
             media.appendChild(audio)                            
         }
@@ -77,10 +50,11 @@
         if(getMIMEType({{ (index .Attachment 0).MediaType }}) == "video"){
             var video = document.createElement("video")
             video.controls = 'controls'
+            video.preload    = 'none'                          
             video.muted    = 'muted'              
             video.src      = '{{ (index .Attachment 0).Href }}'
             video.type     = '{{ (index .Attachment 0).MediaType }}'              
-            video.style = "float: left; margin-right: 10px; margin-bottom: 10px; width: 180px;"
+            video.style = "margin-right: 10px; margin-bottom: 10px; width: 180px;"
             video.innerText = 'Video is not supported.'
             media.appendChild(video)                                          
         }                    
@@ -112,6 +86,8 @@
   <li style="display: inline"><a href="javascript:location.reload()">[Refresh]</a></li>
 </ul>
 <hr>    
+{{ end }}
+{{ define "bottom" }}
 {{ end }}
 
 {{ define "script" }}
