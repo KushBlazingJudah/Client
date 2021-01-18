@@ -3,26 +3,21 @@
   <h1 style="text-align: center; color: #af0a0f;">/{{ .Board.Name }}/ - {{ .Board.PrefName }}</h1>
   <p style="text-align: center;">{{ .Board.Summary }}</p>
   {{ $len := len .Posts }}
-  {{ if gt $len 1 }}
-  <h3 id="newpostbtn"  state="0" style="text-align: center; margin-top: 80px;"><a href="javascript:newpost()">[Start a New Thread]</a></h3>
-  {{ else }} {{ if eq $len 0 }}
-  <h3 id="newpostbtn"  state="0" style="text-align: center; margin-top: 80px;"><a href="javascript:newpost()">[Start a New Thread]</a></h3>
+  {{ if .Board.InReplyTo }}
+  <h3 id="newpostbtn"  state="0" style="text-align: center; margin-top: 80px;"><a href="javascript:newpost()">[Post a Reply]</a></h3>  
   {{ else }}
-  <h3 id="newpostbtn"  state="0" style="text-align: center; margin-top: 80px;"><a href="javascript:newpost()">[Post a Reply]</a></h3>
-  {{ end }}{{ end }}
+  <h3 id="newpostbtn"  state="0" style="text-align: center; margin-top: 80px;"><a href="javascript:newpost()">[Start a New Thread]</a></h3>
+  {{ end }}
   <div id="newpost" style="display: none;">    
     <form id="new-post" action="/post" method="post" enctype="multipart/form-data">        
       <label for="name">Name:</label><br>
       <input type="text" id="name" name="name" placeholder="Anonymous"><br>
       <label for="options">Options:</label><br>
-      <input type="text" id="options" name="options">{{ if eq $len 1 }}<input type="submit" value="Post">{{ end }}<br>
-      {{ if gt $len 1 }}
+      <input type="text" id="options" name="options">{{ if .Board.InReplyTo }}<input type="submit" value="Post">{{ end }}<br>
+      {{ if eq .Board.InReplyTo "" }}
       <label for="subject">Subject:</label><br>      
       <input type="text" id="subject" name="subject"><input type="submit" value="Post"><br>
-      {{ else }} {{ if eq $len 0 }}
-      <label for="subject">Subject:</label><br>      
-      <input type="text" id="subject" name="subject"><input type="submit" value="Post"><br>
-      {{ end }}{{ end }}
+      {{ end }}
       <label for="comment">Comment:</label><br>
       <textarea rows="10" cols="50" id="comment" name="comment"></textarea><br>
       <input type="hidden" id="inReplyTo" name="inReplyTo" value="{{ .Board.InReplyTo }}">
