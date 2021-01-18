@@ -98,7 +98,7 @@ type Verify struct {
 var cache redis.Conn
 
 func initCache() {
-	conn, err := redis.DialURL("redis://localhost")
+	conn, err := redis.DialURL("redis://" + GetConfigValue("redishost"))
 	if err != nil {
 		panic(err)
 	}
@@ -1595,8 +1595,11 @@ func GetInstanceTP(instance string) string {
 	actor := GetActor(Domain)
 
 	re := regexp.MustCompile("(https://|http://)")
-
-	return re.FindString(actor.Id)
+	res := re.FindString(actor.Id)
+	if len(res) > 0 {
+		return res
+	}
+	return "http://"
 }
 
 type ObjectBaseSortDesc []ObjectBase
