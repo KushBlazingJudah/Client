@@ -3,7 +3,7 @@
 {{ $len := len .Posts }}
 {{ range .Posts }}
 {{ $opId := .Id }}
-{{ if gt $len 1 }}
+{{ if eq $board.InReplyTo "" }}
 <hr>
 {{ end }}
 <div style="overflow: auto;">

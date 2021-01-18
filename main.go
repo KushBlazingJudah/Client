@@ -454,6 +454,10 @@ func main() {
 
 		newActorActivity.AtContext.Context = "https://www.w3.org/ns/activitystreams"
 		newActorActivity.Type = "New"
+		var nactor Actor
+		var nobj ObjectBase
+		newActorActivity.Actor = &nactor
+		newActorActivity.Object = &nobj		
 		newActorActivity.Actor.Id = actor.Id
 		newActorActivity.Object.Actor = &board
 		_, pass := GetPasswordFromSession(r)					
@@ -510,6 +514,10 @@ func main() {
 
 		followActivity.AtContext.Context = "https://www.w3.org/ns/activitystreams"
 		followActivity.Type = "Follow"
+		var nactor Actor
+		var obj ObjectBase 
+		followActivity.Actor = &nactor
+		followActivity.Object = &obj		
 		followActivity.Actor.Id = r.FormValue("actor")
 		followActivity.Object.Id = r.FormValue("follow")
 			_, pass := GetPasswordFromSession(r)							
@@ -567,6 +575,10 @@ func main() {
 
 		followActivity.AtContext.Context = "https://www.w3.org/ns/activitystreams"
 		followActivity.Type = "Follow"
+		var nactor Actor
+		var obj ObjectBase 
+		followActivity.Actor = &nactor
+		followActivity.Object = &obj		
 		followActivity.Actor.Id = r.FormValue("actor")
 		followActivity.Object.Id = r.FormValue("follow")
 			_, pass := GetPasswordFromSession(r)									
@@ -975,6 +987,8 @@ func WantToServe(actorName string) (Collection, bool) {
 		if boardActor.Name == actorName {
 			serve = true
 			collection = GetActorCollection(boardActor.Outbox)
+			var nactor Actor
+			collection.Actor = &nactor
 			collection.Actor = boardActor.Id
 		}
 	}
