@@ -6,3 +6,4 @@ dbport:5432
 dbname:fchan_client
 dbuser:postgres
 dbpass:password
+redishost:localhost
