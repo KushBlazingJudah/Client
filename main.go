@@ -1560,7 +1560,7 @@ func RandomID(size int) string {
 
 func GetConfigValue(value string) string {
 	env := os.Getenv(strings.ToUpper(value))
-	if strings.Len(env) > 0 {
+	if len(env) > 0 {
 		// maybe it's available as an environment variable?
 		return env
 	}
