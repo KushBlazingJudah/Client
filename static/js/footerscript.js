@@ -5,19 +5,24 @@ imgArray.forEach(function(img, i){
     img.addEventListener("click", function(e){
         if(img.getAttribute("enlarge") == "0")
         {
+            var attachment = img.getAttribute("attachment")
             img.setAttribute("enlarge", "1");
             img.setAttribute("style", "float: left; margin-right: 10px; cursor: move;");
+            img.src = attachment
         }
         else
         {
+            var preview = img.getAttribute("preview")
             img.setAttribute("enlarge", "0");
             if(img.getAttribute("main") == 1)
             {
                 img.setAttribute("style", "float: left; margin-right: 10px; max-width: 250px; max-height: 250px; cursor: move;");
+                img.src = preview
             }
             else
             {
                 img.setAttribute("style", "float: left; margin-right: 10px; max-width: 125px; max-height: 125px; cursor: move;");
+                img.src = preview                
             }
         }
     });

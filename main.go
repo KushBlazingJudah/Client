@@ -451,7 +451,7 @@ func main() {
 		newActorActivity.AtContext.Context = "https://www.w3.org/ns/activitystreams"
 		newActorActivity.Type = "New"
 		newActorActivity.Actor.Id = actor.Id
-		newActorActivity.Object.Actor = board
+		newActorActivity.Object.Actor = &board
 		_, pass := GetPasswordFromSession(r)					
 		newActorActivity.Auth = pass
 
@@ -1181,7 +1181,7 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 	returnData.TotalPage = len(returnData.Pages) - 1
 
 	w.Header().Set("Host", LocalDomain)
-	t.ExecuteTemplate(w, "layout",  returnData)		
+	t.ExecuteTemplate(w, "layout",  returnData)
 }
 
 func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
@@ -1244,23 +1244,26 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 	re = regexp.MustCompile("f\\w+-\\w+")
 
+
+
 	if re.MatchString(path) {
 		name := GetActorFollowNameFromPath(path)
 		followActors := GetActorsFollowFromName(actor, name)
 		followCollection := GetActorsFollowPostFromId(followActors, postId)
-		
+
 		DeleteRemovedPosts(db, &followCollection)
 		followCollection.OrderedItems = DeleteTombstonePosts(&followCollection)
 		
 		returnData.Board.InReplyTo = followCollection.OrderedItems[0].Id
 		returnData.Posts = append(returnData.Posts, followCollection.OrderedItems[0])
 
-		sort.Sort(ObjectBaseSortAsc(returnData.Posts[0].Replies.OrderedItems))				
-	} else {
-		returnData.Board.InReplyTo = inReplyTo
+		sort.Sort(ObjectBaseSortAsc(returnData.Posts[0].Replies.OrderedItems))
 
+	} else {
+
+		returnData.Board.InReplyTo = inReplyTo
 		collection := GetActorCollection(inReplyTo)
-		
+
 		DeleteRemovedPosts(db, &collection)
 		collection.OrderedItems = DeleteTombstonePosts(&collection)
 		

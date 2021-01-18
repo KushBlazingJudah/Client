@@ -11,7 +11,8 @@ type ActivityRaw struct {
 	Type string `json:"type,omitempty"`
 	Id string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`	
-	Summary string `json:"summary,omitempty"`	
+	Summary string `json:"summary,omitempty"`
+	Auth string `json:"auth,omitempty"`		
 	ToRaw json.RawMessage `json:"to,omitempty"`	
 	BtoRaw json.RawMessage `json:"bto,omitempty"`	
 	CcRaw json.RawMessage `json:"cc,omitempty"`	
@@ -41,7 +42,7 @@ type ObjectArray struct {
 }
 
 type Object struct {
-	Object ObjectBase `json:"object,omitempty"`
+	Object *ObjectBase `json:"object,omitempty"`
 }
 
 type ObjectString struct {
@@ -83,15 +84,15 @@ type Activity struct {
 	AtContext
 	Type string `json:"type,omitempty"`
 	Id string `json:"id,omitempty"`
-	Actor Actor `json:"actor,omitempty"`		
+	Actor *Actor `json:"actor,omitempty"`		
 	Name string `json:"name,omitempty"`	
 	Summary string `json:"summary,omitempty"`
-	Auth string `json:"auth,omitempty"`
+	Auth string `json:"auth,omitempty"`	
 	To []string `json:"to, omitempty"`
 	Bto []string `json:"bto,omitempty"`	
 	Cc []string `json:"cc, omitempty"`
 	Published string `json:"published,omitempty"`
-	Object ObjectBase `json:"object, omitempty"` 
+	Object *ObjectBase `json:"object, omitempty"` 
 }
 
 type ObjectBase struct {
@@ -99,10 +100,10 @@ type ObjectBase struct {
 	Type string `json:"type,omitempty"`
 	Id string `json:"id,omitempty"`
 	Name string `json:"name,omitempty"`
-	Option []string `json:"option,omitempty"`	
+	Option []string `json:"option,omitempty"`
 	Alias string `json:"alias,omitempty"`	
 	AttributedTo string `json:"attributedTo,omitempty"`
-	Actor Actor `json:"actor,omitempty"`	
+	Actor *Actor `json:"actor,omitempty"`
 	Audience string `json:"audience,omitempty"`
 	Content string `json:"content,omitempty"`
 	EndTime string `json:"endTime,omitempty"`
@@ -111,16 +112,16 @@ type ObjectBase struct {
 	Image string `json:"image,omitempty"`
 	InReplyTo []ObjectBase `json:"inReplyTo,omitempty"`
 	Location string `json:"location,omitempty"`
-	Preview string `json:"previewomitempty"`		
+	Preview *NestedObjectBase `json:"preview,omitempty"`		
 	Published string `json:"published,omitempty"`
-	Object NestedObjectBase `json:"object,omitempty"`
+	Updated string `json:"updated,omitempty"`	
+	Object *NestedObjectBase `json:"object,omitempty"`
 	Attachment []ObjectBase `json:"attachment,omitempty"`
-	Replies CollectionBase `json:"replies,omitempty"`
+	Replies *CollectionBase `json:"replies,omitempty"`
 	StartTime string `json:"startTime,omitempty"`
 	Summary string `json:"summary,omitempty"`
 	Tag []ObjectBase `json:"tag,omitempty"`
-	Wallet []CryptoCur `json:"wallet,omitempty"`
-	Updated string `json:"updated,omitempty"`
+	Wallet []CryptoCur `json:"wallet,omitempty"`	
 	Deleted string `json:"deleted,omitempty"`	
 	Url []ObjectBase `json:"url,omitempty"`
 	Href string `json:"href,omitempty"`	
@@ -145,7 +146,7 @@ type NestedObjectBase struct {
 	Name string `json:"name,omitempty"`
 	Alias string `json:"alias,omitempty"`	
 	AttributedTo string `json:"attributedTo,omitempty"`
-	Actor Actor `json:"actor,omitempty"`	
+	Actor *Actor `json:"actor,omitempty"`	
 	Audience string `json:"audience,omitempty"`
 	Content string `json:"content,omitempty"`
 	EndTime string `json:"endTime,omitempty"`
@@ -154,10 +155,10 @@ type NestedObjectBase struct {
 	Image string `json:"image,omitempty"`
 	InReplyTo []ObjectBase `json:"inReplyTo,omitempty"`
 	Location string `json:"location,omitempty"`
-	Preview string `json:"previewomitempty"`		
+	Preview ObjectBase `json:"preview,omitempty"`		
 	Published string `json:"published,omitempty"`
 	Attachment []ObjectBase `json:"attachment,omitempty"`
-	Replies CollectionBase `json:"replies,omitempty"`
+	Replies *CollectionBase `json:"replies,omitempty"`
 	StartTime string `json:"startTime,omitempty"`
 	Summary string `json:"summary,omitempty"`
 	Tag []ObjectBase `json:"tag,omitempty"`
@@ -175,13 +176,13 @@ type NestedObjectBase struct {
 }
 
 type CollectionBase struct {
-	Actor string `json:"actor,omitempty"`	
+	Actor string `json:"actor,omitempty"`
 	Summary string `json:"summary,omitempty"`
 	Type string `json:"type,omitempty"`
 	TotalItems int `json:"totalItems,omitempty"`
 	TotalImgs int `json:"totalImgs,omitempty"`
-	OrderedItems []ObjectBase `json:"orderedItems",omitempty`
-	Items []ObjectBase `json:"items",omitempty`		
+	OrderedItems []ObjectBase `json:"orderedItems,omitempty"`
+	Items []ObjectBase `json:"items,omitempty"`		
 }
 
 type Collection struct {

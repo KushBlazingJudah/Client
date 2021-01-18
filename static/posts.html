@@ -3,7 +3,6 @@
 {{ $len := len .Posts }}
 {{ range .Posts }}
 {{ $opId := .Id }}
-
 {{ if gt $len 1 }}
 <hr>
 {{ end }}
@@ -25,8 +24,15 @@
           img.style = "float: left; margin-right: 10px; margin-bottom: 10px; max-width: 250px; max-height: 250px; cursor: move;"
           img.setAttribute("id", "img")
           img.setAttribute("main", "1")
-          img.setAttribute("enlarge", "0")                            
-          img.setAttribute("src", "{{ (index .Attachment 0).Href }}")
+          img.setAttribute("enlarge", "0")
+          img.setAttribute("attachment", "{{ (index .Attachment 0).Href }}")
+          {{ if .Preview.Href }} 
+          img.setAttribute("src", "{{  .Preview.Href }}")
+          img.setAttribute("preview", "{{ .Preview.Href }}")          
+          {{ else }}
+          img.setAttribute("src", "{{  (index .Attachment 0).Href }}")
+          img.setAttribute("preview", "{{ (index .Attachment 0).Href }}")                    
+          {{ end }}
           media.appendChild(img)
       }          
 
@@ -82,8 +88,15 @@
                 img.style = "float: left; margin-right: 10px; margin-bottom: 10px; max-width: 250px; max-height: 250px; cursor: move;"
                 img.setAttribute("id", "img")
                 img.setAttribute("main", "1")
-                img.setAttribute("enlarge", "0")                            
-                img.setAttribute("src", "{{ (index .Attachment 0).Href }}")
+                img.setAttribute("enlarge", "0")
+                img.setAttribute("attachment", "{{ (index .Attachment 0).Href }}")
+                {{ if .Preview.Href }} 
+                img.setAttribute("src", "{{  .Preview.Href }}")
+                img.setAttribute("preview", "{{ .Preview.Href }}")          
+                {{ else }}
+                img.setAttribute("src", "{{  (index .Attachment 0).Href }}")
+                img.setAttribute("preview", "{{ (index .Attachment 0).Href }}")                    
+                {{ end }}                
                 media.appendChild(img)
             }
 

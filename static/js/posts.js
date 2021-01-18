@@ -129,8 +129,16 @@ function convertContent(actorName, content, opid)
 
         })            
     }
+    
+    re =  /^>.+/gm;
 
-    newContent = newContent.replace(quote, '<span style="color: green;">' + quote + '</span>');
+    match = newContent.match(re);
+    if(match)
+    {
+        match.forEach(function(quote, i) {
+            newContent = newContent.replace(quote, '<span style="color: green;">' + quote + '</span>');
+        })
+    }
     
     return newContent
 }
@@ -177,8 +185,10 @@ function quote(actorName, opid, id)
     header.innerText = "Replying to Thread No. " + shortURL(actorName, opid);
     inReplyTo.value = opid;
 
-    if (opid != id)
-        comment.value += ">>" + id + "\n";
+    if(comment.value != "")
+        comment.value += "\n>>" + id;
+    else
+        comment.value += ">>" + id;
 
     dragElement(header);            
 
