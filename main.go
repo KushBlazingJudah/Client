@@ -987,9 +987,7 @@ func WantToServe(actorName string) (Collection, bool) {
 		if boardActor.Name == actorName {
 			serve = true
 			collection = GetActorCollection(boardActor.Outbox)
-			var nactor Actor
-			collection.Actor = &nactor
-			collection.Actor = boardActor.Id
+			collection.Actor.Id = boardActor.Id
 		}
 	}
 
