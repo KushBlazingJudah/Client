@@ -13,7 +13,7 @@
     <input type="hidden" id="captchaCode" name="captchaCode" value="{{ .Board.CaptchaCode }}">
     <div style="width: 202px; margin: 0 auto; padding-top: 12px;">
       <label for="captcha">Captcha:</label><br>      
-      <input style="display: inline-block;"  type="text" id="captcha" name="captcha"><br>
+      <input style="display: inline-block;"  type="text" id="captcha" name="captcha" autocomplete="off"><br>
     </div>
     <div style="width: 230px; margin: 0 auto;">
       <img src="{{ .Board.Captcha }}">
