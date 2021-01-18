@@ -27,8 +27,9 @@ function shortURL(actorName, url)
     var check = url.replace(actorName + "/", "")
     re = /.+\//g;
     temp = re.exec(url)
+    
 
-    if(stripTransferProtocol(temp[0]) == actorName + "/")
+    if(stripTransferProtocol(temp[0]) == stripTransferProtocol(actorName) + "/")
     {
         var short = url.replace("https://", "");
         short = short.replace("http://", "");
@@ -44,6 +45,7 @@ function shortURL(actorName, url)
 
         return u;            
     }else{
+
         var short = url.replace("https://", "");
         short = short.replace("http://", "");
         short = short.replace("www.", "");
@@ -104,7 +106,6 @@ function convertSize(size)
 
 function getBoardId(url)
 {
-    console.log(url)        
     var re = /\/([^/\n]+)(.+)?/gm
     var matches = re.exec(url);
     return matches[1]

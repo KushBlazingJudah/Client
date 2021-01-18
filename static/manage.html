@@ -49,7 +49,7 @@
 
     {{ $domain := .Domain }}
     {{ range .Reported }}
-    <li><a id="rpost" post="{{ .ID }}" href=""></a> - <b>{{ .Count }}</b> <a href="{{$board.TP}}{{ $domain }}/delete?id={{ .ID }}">[Remove Post]</a> <a href="{{$board.TP}}{{ $domain }}/deleteattach?id={{ .ID }}">[Remove Attachment]</a> <a href="{{$board.TP}}{{ $domain }}/report?id={{ .ID }}&close=1&board={{ $board.Name }}">[Close]</a></li>
+    <li><a id="rpost" post="{{ .ID }}" href=""></a> - <b>{{ .Count }}</b> <a href="/delete?id={{ .ID }}">[Remove Post]</a> <a href="/deleteattach?id={{ .ID }}">[Remove Attachment]</a> <a href="/report?id={{ .ID }}&close=1&board={{ $board.Name }}">[Close]</a></li>
     {{ end }}
   </ul>            
 </div>

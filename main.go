@@ -330,6 +330,10 @@ func main() {
 
 			followActivity.AtContext.Context = "https://www.w3.org/ns/activitystreams"
 			followActivity.Type = "Follow"
+			var nactor Actor
+			var obj ObjectBase 
+			followActivity.Actor = &nactor
+			followActivity.Object = &obj
 			followActivity.Actor.Id = r.FormValue("actor")
 			followActivity.Object.Id = r.FormValue("follow")
 			_, pass := GetPasswordFromSession(r)			
@@ -632,6 +636,10 @@ func main() {
 		req, err := http.NewRequest("GET", TP + "" + Domain + "/report?id=" + id + "&close=" + close, nil)
 
 		CheckError(err, "error with reporting post")
+		
+			_, pass := GetPasswordFromSession(r)											
+		
+		req.Header.Set("Authorization",  "Basic " + pass)
 
 		resp, err := http.DefaultClient.Do(req)
 
@@ -758,7 +766,7 @@ func GetActor(id string) Actor {
 
 	resp, err := http.DefaultClient.Do(req)
 
-	if err != nil {
+	if err != nil || resp.StatusCode != 200 {
 		fmt.Println("could not get actor from " + id)		
 		return respActor
 	}
@@ -1214,23 +1222,25 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 	domainURL = re.ReplaceAllString(domainURL, "")
 
-	resp, err := http.Get(domainURL + "/getcaptcha")
+	if domainURL != "" {
+		resp, err := http.Get(domainURL + "/getcaptcha")
 
-	CheckError(err, "error getting captcha")
+		CheckError(err, "error getting captcha")
 
-	body, _ := ioutil.ReadAll(resp.Body)			
+		body, _ := ioutil.ReadAll(resp.Body)			
 
-	returnData.Board.Captcha = domainURL + "/" + string(body)
+		returnData.Board.Captcha = domainURL + "/" + string(body)
+ 
+		re = regexp.MustCompile("\\w+\\.\\w+$")
 
-	re = regexp.MustCompile("\\w+\\.\\w+$")
+		code := re.FindString(returnData.Board.Captcha)
 
-	code := re.FindString(returnData.Board.Captcha)
+		re = regexp.MustCompile("\\w+")
 
-	re = regexp.MustCompile("\\w+")
-
-	code = re.FindString(code)
-	
-	returnData.Board.CaptchaCode = code	
+		code = re.FindString(code)
+		
+		returnData.Board.CaptchaCode = code
+	}
 
 	returnData.Title = "/" + returnData.Board.Name + "/ - " + returnData.Board.PrefName
 
@@ -1253,9 +1263,11 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 		DeleteRemovedPosts(db, &followCollection)
 		followCollection.OrderedItems = DeleteTombstonePosts(&followCollection)
-		
-		returnData.Board.InReplyTo = followCollection.OrderedItems[0].Id
-		returnData.Posts = append(returnData.Posts, followCollection.OrderedItems[0])
+
+		if len(followCollection.OrderedItems) > 0 {		
+			returnData.Board.InReplyTo = followCollection.OrderedItems[0].Id
+			returnData.Posts = append(returnData.Posts, followCollection.OrderedItems[0])
+		}
 
 		sort.Sort(ObjectBaseSortAsc(returnData.Posts[0].Replies.OrderedItems))
 
@@ -1266,9 +1278,11 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 		DeleteRemovedPosts(db, &collection)
 		collection.OrderedItems = DeleteTombstonePosts(&collection)
-		
-		returnData.Posts = append(returnData.Posts, collection.OrderedItems[0])
-		sort.Sort(ObjectBaseSortAsc(returnData.Posts[0].Replies.OrderedItems))						
+
+		if len(collection.OrderedItems) > 0 {
+			returnData.Posts = append(returnData.Posts, collection.OrderedItems[0])
+			sort.Sort(ObjectBaseSortAsc(returnData.Posts[0].Replies.OrderedItems))
+		}
 	}
 
 	t.ExecuteTemplate(w, "layout",  returnData)			
