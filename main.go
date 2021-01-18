@@ -1,29 +1,31 @@
 package main
 
-import "fmt"
-import "net/http"
-import "encoding/json"
-import "io/ioutil"
-import "database/sql"
-import _ "github.com/lib/pq"
-import "html/template"
-import "regexp"
-import "strings"
-import "strconv"
-import "math"
-import "sort"
-import "mime/multipart"
-import "bytes"
-import "io"
-import "time"
-import "bufio"
+import (
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 
-import "os"
-import "os/exec"
-import "math/rand"
+	"bufio"
+	"bytes"
+	"html/template"
+	"io"
+	"math"
+	"math/rand"
+	"mime/multipart"
+	"os"
+	"os/exec"
+	"regexp"
+	"sort"
+	"strconv"
+	"strings"
+	"time"
 
-import "github.com/gomodule/redigo/redis"
-import "github.com/gofrs/uuid"
+	"github.com/gofrs/uuid"
+	"github.com/gomodule/redigo/redis"
+	_ "github.com/lib/pq"
+)
 
 //The main instance that client is talking to
 var Domain = GetConfigValue("instance")
@@ -40,57 +42,57 @@ var Key *string = new(string)
 
 var Boards *[]ObjectBase = new([]ObjectBase)
 
-type Board struct{
-	Name string
-	Actor string
-	Summary string
-	PrefName string
-	InReplyTo string
-	Location string
-	To string
-	RedirectTo string
-	Captcha string
+type Board struct {
+	Name        string
+	Actor       string
+	Summary     string
+	PrefName    string
+	InReplyTo   string
+	Location    string
+	To          string
+	RedirectTo  string
+	Captcha     string
 	CaptchaCode string
-	ModCred string
-	Domain string
-	TP string
+	ModCred     string
+	Domain      string
+	TP          string
 }
 
 type PageData struct {
-	Title string
-	Message string	
-	Board Board
-	Pages []int
+	Title       string
+	Message     string
+	Board       Board
+	Pages       []int
 	CurrentPage int
-	TotalPage int
-	Boards []Board
-	Posts []ObjectBase
-	Key string
+	TotalPage   int
+	Boards      []Board
+	Posts       []ObjectBase
+	Key         string
 }
 
 type AdminPage struct {
-	Title string
-	Board Board
-	Key string
-	Actor string
-	Boards []Board	
+	Title     string
+	Board     Board
+	Key       string
+	Actor     string
+	Boards    []Board
 	Following []string
 	Followers []string
-	Reported []Report
-	Domain string
+	Reported  []Report
+	Domain    string
 }
 
 type Report struct {
-	ID string
+	ID    string
 	Count int
 }
 
 type Verify struct {
-	Type string
+	Type       string
 	Identifier string
-	Code string
-	Created string
-	Board string
+	Code       string
+	Created    string
+	Board      string
 }
 
 var cache redis.Conn
@@ -103,7 +105,7 @@ func initCache() {
 	cache = conn
 }
 
-func checkSession(w http.ResponseWriter, r *http.Request) (interface{}, error){
+func checkSession(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 
 	c, err := r.Cookie("session_token")
 
@@ -112,15 +114,15 @@ func checkSession(w http.ResponseWriter, r *http.Request) (interface{}, error){
 			w.WriteHeader(http.StatusUnauthorized)
 			return nil, err
 		}
-		
+
 		w.WriteHeader(http.StatusBadRequest)
 		return nil, err
 	}
-	
+
 	sessionToken := c.Value
 
 	response, err := cache.Do("GET", sessionToken)
-	
+
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return nil, err
@@ -136,7 +138,7 @@ func checkSession(w http.ResponseWriter, r *http.Request) (interface{}, error){
 func main() {
 
 	if _, err := os.Stat("./public"); os.IsNotExist(err) {
-    os.Mkdir("./public", 0755)
+		os.Mkdir("./public", 0755)
 	}
 
 	initCache()
@@ -145,7 +147,7 @@ func main() {
 
 	*Key = GetClientKey()
 
-	db := ConnectDB();
+	db := ConnectDB()
 
 	defer db.Close()
 
@@ -159,34 +161,34 @@ func main() {
 	http.Handle("/public/", http.StripPrefix("/public", neuter(fileServer)))
 
 	javascriptFiles := http.FileServer(http.Dir("./static"))
-	http.Handle("/static/", http.StripPrefix("/static", neuter(javascriptFiles)))				
+	http.Handle("/static/", http.StripPrefix("/static", neuter(javascriptFiles)))
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request){
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		actor := GetActorFromPath(path, "/")
 
 		index := (path == "/")
-		
-		all := (path == "/" + actor) || (path == "/" + actor + "/")
+
+		all := (path == "/"+actor) || (path == "/"+actor+"/")
 
 		re := regexp.MustCompile("/" + actor + "/\\w+")
-		
-		post := 	re.MatchString(path)
+
+		post := re.MatchString(path)
 
 		re = regexp.MustCompile("/" + actor + "/[0-9]{1,2}$")
-		
-		page := re.MatchString(path)		
-		
-		catalog := (path == "/" + actor + "/catalog")
+
+		page := re.MatchString(path)
+
+		catalog := (path == "/"+actor+"/catalog")
 
 		if index {
-			IndexGet(w,  r)
+			IndexGet(w, r)
 		} else if all {
 			collection, valid := WantToServe(actor)
 			if valid {
 				OutboxGet(w, r, db, collection)
 			} else {
-				
+
 			}
 		} else if catalog {
 			CatalogGet(w, r, db)
@@ -204,69 +206,69 @@ func main() {
 		}
 	})
 
-	http.HandleFunc("/post", func(w http.ResponseWriter, r *http.Request){
+	http.HandleFunc("/post", func(w http.ResponseWriter, r *http.Request) {
 
 		r.ParseMultipartForm(10 << 20)
 
 		file, header, _ := r.FormFile("file")
 
-		if(file != nil && header.Size > (7 << 20)){
+		if file != nil && header.Size > (7<<20) {
 			w.Write([]byte("7MB max file size"))
 			return
 		}
 
-		if(r.FormValue("inReplyTo") == "" || file == nil) {
-			if(r.FormValue("comment") == "" && r.FormValue("subject") == ""){
+		if r.FormValue("inReplyTo") == "" || file == nil {
+			if r.FormValue("comment") == "" && r.FormValue("subject") == "" {
 				w.Write([]byte("Comment or Subject required"))
 				return
 			}
 		}
 
-		if(r.FormValue("captcha") == "") {
+		if r.FormValue("captcha") == "" {
 			w.Write([]byte("Captcha required"))
 			return
-		}			
-		
+		}
+
 		b := bytes.Buffer{}
 		we := multipart.NewWriter(&b)
 
-		if(file != nil){
+		if file != nil {
 			var fw io.Writer
-			
+
 			fw, err := we.CreateFormFile("file", header.Filename)
 
 			CheckError(err, "error with form file create")
 
 			_, err = io.Copy(fw, file)
-			
+
 			CheckError(err, "error with form file copy")
 		}
 
 		reply := ParseCommentForReply(r.FormValue("comment"))
 
 		for key, r0 := range r.Form {
-			if(key == "captcha") {
-				err := we.WriteField(key, r.FormValue("captchaCode") + ":" + r.FormValue("captcha"))
-				CheckError(err, "error with writing field")					
-			}else{
+			if key == "captcha" {
+				err := we.WriteField(key, r.FormValue("captchaCode")+":"+r.FormValue("captcha"))
+				CheckError(err, "error with writing field")
+			} else {
 				err := we.WriteField(key, r0[0])
 				CheckError(err, "error with writing field")
 			}
 		}
-		
-		if(r.FormValue("inReplyTo") == "" && reply != ""){
+
+		if r.FormValue("inReplyTo") == "" && reply != "" {
 			err := we.WriteField("inReplyTo", reply)
-			CheckError(err, "error with writing inReplyTo field")			
+			CheckError(err, "error with writing inReplyTo field")
 		}
-		
+
 		we.Close()
 
 		req, err := http.NewRequest("POST", r.FormValue("sendTo"), &b)
-		
+
 		CheckError(err, "error with post form req")
-		
+
 		req.Header.Set("Content-Type", we.FormDataContentType())
-		req.Header.Set("Authorization", "api:" + *Key)		
+		req.Header.Set("Authorization", "api:"+*Key)
 
 		resp, err := http.DefaultClient.Do(req)
 
@@ -279,25 +281,24 @@ func main() {
 		body, _ := ioutil.ReadAll(resp.Body)
 
 		CheckError(err, "error with post form resp")
-		if(resp.StatusCode == 200){
+		if resp.StatusCode == 200 {
 			var obj ObjectBase
 			obj = ParseOptions(r, obj)
 			for _, e := range obj.Option {
-				if(e == "noko" || e == "nokosage"){
-					http.Redirect(w, r, TP + "" + LocalDomain + "/" + r.FormValue("boardName") + "/" + string(body) , http.StatusMovedPermanently)
+				if e == "noko" || e == "nokosage" {
+					http.Redirect(w, r, TP+""+LocalDomain+"/"+r.FormValue("boardName")+"/"+string(body), http.StatusMovedPermanently)
 					break
 				}
 			}
-			http.Redirect(w, r, TP + "" + LocalDomain + "/" + r.FormValue("boardName"), http.StatusMovedPermanently)			
+			http.Redirect(w, r, TP+""+LocalDomain+"/"+r.FormValue("boardName"), http.StatusMovedPermanently)
 		}
-	})	
+	})
 
-	http.HandleFunc("/" + *Key + "/", func(w http.ResponseWriter, r *http.Request) {
-
+	http.HandleFunc("/"+*Key+"/", func(w http.ResponseWriter, r *http.Request) {
 
 		id, _ := GetPasswordFromSession(r)
-		
-		name := GetActorFromPath(r.URL.Path, "/" + *Key + "/")
+
+		name := GetActorFromPath(r.URL.Path, "/"+*Key+"/")
 		actor := GetActorByName(name)
 
 		if actor.Name == "" {
@@ -317,11 +318,11 @@ func main() {
 		re = regexp.MustCompile("/" + *Key + "/" + actor.Name)
 		manage := re.MatchString(r.URL.Path)
 
-		re = regexp.MustCompile("/" + *Key )
+		re = regexp.MustCompile("/" + *Key)
 		admin := re.MatchString(r.URL.Path)
 
-		re = regexp.MustCompile("/" + *Key + "/follow" )
-		adminFollow := re.MatchString(r.URL.Path)		
+		re = regexp.MustCompile("/" + *Key + "/follow")
+		adminFollow := re.MatchString(r.URL.Path)
 
 		if follow || adminFollow {
 			r.ParseForm()
@@ -331,30 +332,30 @@ func main() {
 			followActivity.AtContext.Context = "https://www.w3.org/ns/activitystreams"
 			followActivity.Type = "Follow"
 			var nactor Actor
-			var obj ObjectBase 
+			var obj ObjectBase
 			followActivity.Actor = &nactor
 			followActivity.Object = &obj
 			followActivity.Actor.Id = r.FormValue("actor")
 			followActivity.Object.Id = r.FormValue("follow")
-			_, pass := GetPasswordFromSession(r)			
+			_, pass := GetPasswordFromSession(r)
 			followActivity.Auth = pass
 
 			enc, _ := json.Marshal(followActivity)
 
-			_, _ = http.Post(actor.Outbox , "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"", bytes.NewReader(enc))
+			_, _ = http.Post(actor.Outbox, "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"", bytes.NewReader(enc))
 
 			http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
-			
+
 		} else if manage && actor.Name != "" {
 			t := template.Must(template.ParseFiles("./static/main.html", "./static/manage.html"))
 
 			follow := GetActorCollection(actor.Following)
 			follower := GetActorCollection(actor.Followers)
-			reported := GetActorCollectionReq(r, actor.Id + "/reported")
+			reported := GetActorCollectionReq(r, actor.Id+"/reported")
 
 			var following []string
 			var followers []string
-			var reports   []Report
+			var reports []Report
 
 			for _, e := range follow.Items {
 				following = append(following, e.Id)
@@ -367,7 +368,7 @@ func main() {
 			for _, e := range reported.Items {
 				var r Report
 				r.Count = int(e.Size)
-				r.ID    = e.Id
+				r.ID = e.Id
 				reports = append(reports, r)
 			}
 
@@ -376,20 +377,20 @@ func main() {
 			for _, e := range localReports {
 				var r Report
 				r.Count = e.Count
-				r.ID    = e.ID
+				r.ID = e.ID
 				reports = append(reports, r)
-			}			
+			}
 
 			var adminData AdminPage
 			adminData.Following = following
 			adminData.Followers = followers
-			adminData.Reported  = reports
+			adminData.Reported = reports
 			adminData.Domain = LocalDomain
 
 			var boardCollection []Board
 
 			boardCollection = GetBoardCollection()
-			
+
 			adminData.Title = "Manage /" + actor.Name + "/"
 			adminData.Boards = boardCollection
 			adminData.Board.Name = actor.Name
@@ -397,11 +398,11 @@ func main() {
 			adminData.Key = *Key
 			adminData.Board.TP = TP
 			t.ExecuteTemplate(w, "layout", adminData)
-			
+
 		} else if admin || name == Domain {
 
-			t := template.Must(template.ParseFiles("./static/main.html", "./static/nadmin.html"))						
-	
+			t := template.Must(template.ParseFiles("./static/main.html", "./static/nadmin.html"))
+
 			actor := GetActor(Domain)
 			follow := GetActorCollection(actor.Following).Items
 			follower := GetActorCollection(actor.Followers).Items
@@ -423,18 +424,18 @@ func main() {
 			adminData.Actor = StripTransferProtocol(actor.Id)
 			adminData.Key = *Key
 			adminData.Domain = Domain
-			adminData.Board.ModCred,_ = GetPasswordFromSession(r)
+			adminData.Board.ModCred, _ = GetPasswordFromSession(r)
 
 			var boardCollection []Board
 
 			boardCollection = GetBoardCollection()
-			adminData.Boards = boardCollection			
+			adminData.Boards = boardCollection
 
-			t.ExecuteTemplate(w, "layout",  adminData)				
+			t.ExecuteTemplate(w, "layout", adminData)
 		}
 	})
 
-	http.HandleFunc("/" + *Key + "/addboard", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/"+*Key+"/addboard", func(w http.ResponseWriter, r *http.Request) {
 
 		var newActorActivity Activity
 		var board Actor
@@ -446,7 +447,7 @@ func main() {
 		} else {
 			restrict = false
 		}
-		
+
 		board.Name = r.FormValue("name")
 		board.PreferredUsername = r.FormValue("prefname")
 		board.Summary = r.FormValue("summary")
@@ -456,14 +457,14 @@ func main() {
 		newActorActivity.Type = "New"
 		newActorActivity.Actor.Id = actor.Id
 		newActorActivity.Object.Actor = &board
-		_, pass := GetPasswordFromSession(r)					
+		_, pass := GetPasswordFromSession(r)
 		newActorActivity.Auth = pass
 
 		enc, _ := json.Marshal(newActorActivity)
 
 		actor := GetActor(Domain)
 
-		resp, err := http.Post(actor.Outbox , "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"", bytes.NewReader(enc))
+		resp, err := http.Post(actor.Outbox, "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"", bytes.NewReader(enc))
 
 		CheckError(err, "error with add board follow resp")
 
@@ -472,15 +473,15 @@ func main() {
 		body, _ := ioutil.ReadAll(resp.Body)
 
 		var respActor Actor
-		
+
 		err = json.Unmarshal(body, &respActor)
 
-		CheckError(err, "error getting actor from body in new board")		
+		CheckError(err, "error getting actor from body in new board")
 
 		//update board list with new instances following
 		if resp.StatusCode == 200 {
 			var board []ObjectBase
-			var item ObjectBase			
+			var item ObjectBase
 			var removed bool = false
 
 			item.Id = respActor.Id
@@ -495,16 +496,16 @@ func main() {
 			if !removed {
 				board = append(board, item)
 			}
-				
-			*Boards = board
-		}		
 
-    http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)				
+			*Boards = board
+		}
+
+		http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
 	})
 
-	http.HandleFunc("/" + *Key + "/follow", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/"+*Key+"/follow", func(w http.ResponseWriter, r *http.Request) {
 
-		r.ParseForm()		
+		r.ParseForm()
 
 		var followActivity Activity
 
@@ -512,14 +513,14 @@ func main() {
 		followActivity.Type = "Follow"
 		followActivity.Actor.Id = r.FormValue("actor")
 		followActivity.Object.Id = r.FormValue("follow")
-			_, pass := GetPasswordFromSession(r)							
+		_, pass := GetPasswordFromSession(r)
 		followActivity.Auth = pass
 
 		enc, _ := json.Marshal(followActivity)
 
 		actor := GetActor(Domain)
 
-		resp, err := http.Post(actor.Outbox , "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"", bytes.NewReader(enc))
+		resp, err := http.Post(actor.Outbox, "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"", bytes.NewReader(enc))
 
 		CheckError(err, "error with add board follow resp")
 
@@ -533,14 +534,13 @@ func main() {
 
 		CheckError(err, "error getting follow activifty from body")
 
-
 		//update board list with new instances following
 		if resp.StatusCode == 200 {
 			var board []ObjectBase
-			var item ObjectBase			
+			var item ObjectBase
 			var removed bool = false
 
-			item.Id = followActivity.Object.Id			
+			item.Id = followActivity.Object.Id
 			for _, e := range *Boards {
 				if e.Id != item.Id {
 					board = append(board, e)
@@ -552,16 +552,16 @@ func main() {
 			if !removed {
 				board = append(board, item)
 			}
-				
+
 			*Boards = board
 		}
 
-    http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)		
+		http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
 	})
 
-	http.HandleFunc("/" + *Key + "/following", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/"+*Key+"/following", func(w http.ResponseWriter, r *http.Request) {
 
-		r.ParseForm()		
+		r.ParseForm()
 
 		var followActivity Activity
 
@@ -569,30 +569,30 @@ func main() {
 		followActivity.Type = "Follow"
 		followActivity.Actor.Id = r.FormValue("actor")
 		followActivity.Object.Id = r.FormValue("follow")
-			_, pass := GetPasswordFromSession(r)									
+		_, pass := GetPasswordFromSession(r)
 		followActivity.Auth = pass
 
 		enc, _ := json.Marshal(followActivity)
 
 		actor := GetActor(Domain)
 
-		_, err := http.Post(actor.Outbox , "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"", bytes.NewReader(enc))
+		_, err := http.Post(actor.Outbox, "application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"", bytes.NewReader(enc))
 
 		CheckError(err, "error with following resp")
 
-    http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)		
-	})	
+		http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
+	})
 
 	http.HandleFunc("/delete", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("id")
 
-		req, err := http.NewRequest("GET", TP + "" + Domain + "/delete?id=" + id, nil)
+		req, err := http.NewRequest("GET", TP+""+Domain+"/delete?id="+id, nil)
 
 		CheckError(err, "error with deleting post")
 
-			_, pass := GetPasswordFromSession(r)											
+		_, pass := GetPasswordFromSession(r)
 
-		req.Header.Set("Authorization", "Basic " + pass)		
+		req.Header.Set("Authorization", "Basic "+pass)
 
 		resp, err := http.DefaultClient.Do(req)
 
@@ -600,46 +600,46 @@ func main() {
 
 		if resp.StatusCode == 400 && pass != "" {
 			CreateLocalDeleteDB(db, id, "post")
-		}				
-		
-    http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
+		}
+
+		http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
 	})
 
 	http.HandleFunc("/deleteattach", func(w http.ResponseWriter, r *http.Request) {
 		id := r.URL.Query().Get("id")
 
-		req, err := http.NewRequest("GET", TP + "" + Domain + "/deleteattach?id=" + id, nil)
+		req, err := http.NewRequest("GET", TP+""+Domain+"/deleteattach?id="+id, nil)
 
 		CheckError(err, "error with deleting attachment")
 
-			_, pass := GetPasswordFromSession(r)													
+		_, pass := GetPasswordFromSession(r)
 
-		req.Header.Set("Authorization", "Basic " + pass)
+		req.Header.Set("Authorization", "Basic "+pass)
 
 		resp, err := http.DefaultClient.Do(req)
 
 		CheckError(err, "error with getting delete attachment resp")
 
 		if resp.StatusCode == 400 && pass != "" {
-			CreateLocalDeleteDB(db, id, "attachment")			
-		}		
+			CreateLocalDeleteDB(db, id, "attachment")
+		}
 
-    http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)		
+		http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
 	})
 
 	http.HandleFunc("/report", func(w http.ResponseWriter, r *http.Request) {
 
 		id := r.URL.Query().Get("id")
 		board := r.URL.Query().Get("board")
-		close := r.URL.Query().Get("close")		
+		close := r.URL.Query().Get("close")
 
-		req, err := http.NewRequest("GET", TP + "" + Domain + "/report?id=" + id + "&close=" + close, nil)
+		req, err := http.NewRequest("GET", TP+""+Domain+"/report?id="+id+"&close="+close, nil)
 
 		CheckError(err, "error with reporting post")
-		
-			_, pass := GetPasswordFromSession(r)											
-		
-		req.Header.Set("Authorization",  "Basic " + pass)
+
+		_, pass := GetPasswordFromSession(r)
+
+		req.Header.Set("Authorization", "Basic "+pass)
 
 		resp, err := http.DefaultClient.Do(req)
 
@@ -653,11 +653,11 @@ func main() {
 			}
 		}
 
-    http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)				
+		http.Redirect(w, r, r.Header.Get("Referer"), http.StatusSeeOther)
 	})
 
-	http.HandleFunc("/verify", func(w http.ResponseWriter, r *http.Request){
-		if(r.Method == "POST") {
+	http.HandleFunc("/verify", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
 			r.ParseForm()
 			identifier := r.FormValue("id")
 			code := r.FormValue("code")
@@ -667,8 +667,8 @@ func main() {
 			verify.Code = code
 
 			j, _ := json.Marshal(&verify)
-			
-			req, err := http.NewRequest("POST", TP + "" + Domain + "/verify", bytes.NewBuffer(j))
+
+			req, err := http.NewRequest("POST", TP+""+Domain+"/verify", bytes.NewBuffer(j))
 
 			CheckError(err, "error making verify req")
 
@@ -684,17 +684,17 @@ func main() {
 
 			body = StripTransferProtocol(body)
 
-			if(resp.StatusCode != 200) {
+			if resp.StatusCode != 200 {
 				t := template.Must(template.ParseFiles("./static/verify.html"))
-				t.Execute(w, "wrong password " + verify.Code)			
+				t.Execute(w, "wrong password "+verify.Code)
 			} else {
-				
+
 				sessionToken, _ := uuid.NewV4()
 
-				_, err := cache.Do("SETEX", sessionToken, "86400", body + "|" + verify.Code)
+				_, err := cache.Do("SETEX", sessionToken, "86400", body+"|"+verify.Code)
 				if err != nil {
 					t := template.Must(template.ParseFiles("./static/verify.html"))
-					t.Execute(w, "")			
+					t.Execute(w, "")
 					return
 				}
 
@@ -704,32 +704,32 @@ func main() {
 					Expires: time.Now().Add(60 * 60 * 24 * time.Second),
 				})
 
-				http.Redirect(w, r, "/", http.StatusSeeOther)				
+				http.Redirect(w, r, "/", http.StatusSeeOther)
 			}
 		} else {
 			t := template.Must(template.ParseFiles("./static/verify.html"))
 			t.Execute(w, "")
 		}
-	})		
+	})
 
 	fmt.Println("Client for " + Domain + " running on port " + Port)
 
 	fmt.Println("Client key: " + *Key)
-	
+
 	http.ListenAndServe(Port, nil)
-	
+
 }
 
 func ConnectDB() *sql.DB {
 
-	host     := GetConfigValue("dbhost")
-	port, _  := strconv.Atoi(GetConfigValue("dbport"))
-	user     := GetConfigValue("dbuser")
+	host := GetConfigValue("dbhost")
+	port, _ := strconv.Atoi(GetConfigValue("dbport"))
+	user := GetConfigValue("dbuser")
 	password := GetConfigValue("dbpass")
-	dbname   := GetConfigValue("dbname")
-	
+	dbname := GetConfigValue("dbname")
+
 	// connect to the database
-	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s " +
+	psqlInfo := fmt.Sprintf("host=%s port=%d user=%s password=%s "+
 		"dbname=%s sslmode=disable", host, port, user, password, dbname)
 
 	db, err := sql.Open("postgres", psqlInfo)
@@ -743,11 +743,11 @@ func ConnectDB() *sql.DB {
 	return db
 }
 
-func CheckError(e error, m string) error{
+func CheckError(e error, m string) error {
 	if e != nil {
 		fmt.Println()
 		fmt.Println(m)
-		fmt.Println()		
+		fmt.Println()
 		panic(e)
 	}
 
@@ -760,14 +760,14 @@ func GetActor(id string) Actor {
 
 	id = StripTransferProtocol(id)
 
-	req, err := http.NewRequest("GET", "http://" + id, nil)
+	req, err := http.NewRequest("GET", "http://"+id, nil)
 
 	CheckError(err, "error with getting actor req")
 
 	resp, err := http.DefaultClient.Do(req)
 
 	if err != nil || resp.StatusCode != 200 {
-		fmt.Println("could not get actor from " + id)		
+		fmt.Println("could not get actor from " + id)
 		return respActor
 	}
 
@@ -787,7 +787,7 @@ func GetActorCollection(collection string) Collection {
 
 	req, err := http.NewRequest("GET", collection, nil)
 
-	CheckError(err, "error with getting actor collection req " + collection)
+	CheckError(err, "error with getting actor collection req "+collection)
 
 	resp, err := http.DefaultClient.Do(req)
 
@@ -803,9 +803,9 @@ func GetActorCollection(collection string) Collection {
 
 		err = json.Unmarshal(body, &nCollection)
 
-		CheckError(err, "error getting actor collection from body " + collection)
+		CheckError(err, "error getting actor collection from body "+collection)
 	}
-	
+
 	return nCollection
 }
 
@@ -814,15 +814,15 @@ func GetActorCollectionReq(r *http.Request, collection string) Collection {
 
 	req, err := http.NewRequest("GET", collection, nil)
 
-	CheckError(err, "error with getting actor collection req " + collection)
+	CheckError(err, "error with getting actor collection req "+collection)
 
-	_, pass := GetPasswordFromSession(r)													
+	_, pass := GetPasswordFromSession(r)
 
-	req.Header.Set("Authorization", "Basic " + pass)		
+	req.Header.Set("Authorization", "Basic "+pass)
 
 	resp, err := http.DefaultClient.Do(req)
 
-	CheckError(err, "error with getting actor collection resp " + collection)
+	CheckError(err, "error with getting actor collection resp "+collection)
 
 	if resp.StatusCode == 200 {
 
@@ -832,9 +832,9 @@ func GetActorCollectionReq(r *http.Request, collection string) Collection {
 
 		err = json.Unmarshal(body, &nCollection)
 
-		CheckError(err, "error getting actor collection from body " + collection)
+		CheckError(err, "error getting actor collection from body "+collection)
 	}
-	
+
 	return nCollection
 }
 
@@ -848,12 +848,12 @@ func GetCollectiveOutbox(actor Actor) []ObjectBase {
 	for _, e := range actorOutbox {
 		cOutbox = append(cOutbox, e)
 	}
-	
+
 	for _, e := range actorFollowing {
 		followingActor := GetActor(e.Id)
 		followActorOutbox := GetActorCollection(followingActor.Outbox).OrderedItems
 
-		for _, e := range followActorOutbox{
+		for _, e := range followActorOutbox {
 			cOutbox = append(cOutbox, e)
 		}
 	}
@@ -876,7 +876,7 @@ func IndexGet(w http.ResponseWriter, r *http.Request) {
 		board.Location = "/" + boardActor.Name
 		boardCollection = append(boardCollection, board)
 	}
-	
+
 	var data PageData
 	data.Title = "Welcome to " + actor.PreferredUsername
 	data.Message = fmt.Sprintf("This is the client for the image board %s. The current version of the code running the server and client is volatile, expect a bumpy ride for the time being. Get the server and client code here https://github.com/FChannel0", Domain)
@@ -885,11 +885,11 @@ func IndexGet(w http.ResponseWriter, r *http.Request) {
 	data.Key = *Key
 	data.Board.Domain = Domain
 	data.Board.ModCred, _ = GetPasswordFromSession(r)
-	
-	t.ExecuteTemplate(w, "layout",  data)	
+
+	t.ExecuteTemplate(w, "layout", data)
 }
 
-func GetActorFollowNameFromPath(path string) string{
+func GetActorFollowNameFromPath(path string) string {
 	var actor string
 
 	re := regexp.MustCompile("f\\w+-")
@@ -897,7 +897,7 @@ func GetActorFollowNameFromPath(path string) string{
 	actor = re.FindString(path)
 
 	actor = strings.Replace(actor, "f", "", 1)
-	actor = strings.Replace(actor, "-", "", 1)	
+	actor = strings.Replace(actor, "-", "", 1)
 
 	return actor
 }
@@ -918,7 +918,7 @@ func GetActorsFollowFromName(actor Actor, name string) []Actor {
 	return followingActors
 }
 
-func GetActorsFollowPostFromId(actors []Actor, id string) Collection{
+func GetActorsFollowPostFromId(actors []Actor, id string) Collection {
 	var collection Collection
 
 	for _, e := range actors {
@@ -938,7 +938,7 @@ func GetActorFromPath(location string, prefix string) string {
 
 	var actor string
 
-	if(len(match) < 1 ) {
+	if len(match) < 1 {
 		actor = "/"
 	} else {
 		actor = strings.Replace(match[1], "/", "", -1)
@@ -949,18 +949,18 @@ func GetActorFromPath(location string, prefix string) string {
 	} else {
 		actor = actor
 	}
-	
+
 	return actor
 }
 
 func GetActorByName(name string) Actor {
 	var actor Actor
-		for _, e := range *Boards {
-			boardActor := GetActor(e.Id)
-			if boardActor.Name == name {
-				actor = boardActor
-			}
+	for _, e := range *Boards {
+		boardActor := GetActor(e.Id)
+		if boardActor.Name == name {
+			actor = boardActor
 		}
+	}
 
 	return actor
 }
@@ -969,7 +969,7 @@ func WantToServe(actorName string) (Collection, bool) {
 
 	var collection Collection
 	serve := false
-	
+
 	for _, e := range *Boards {
 		boardActor := GetActor(e.Id)
 		if boardActor.Name == actorName {
@@ -982,17 +982,17 @@ func WantToServe(actorName string) (Collection, bool) {
 	return collection, serve
 }
 
-func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
+func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	name := GetActorFromPath(r.URL.Path, "/")
 	actor := GetActorByName(name)
 
-	t := template.Must(template.ParseFiles("./static/main.html", "./static/ncatalog.html", "./static/top.html"))			
+	t := template.Must(template.ParseFiles("./static/main.html", "./static/ncatalog.html", "./static/top.html"))
 
 	returnData := new(PageData)
 
 	var mergeCollection Collection
 
-	actorCol := GetActorCollection(actor.Outbox)	
+	actorCol := GetActorCollection(actor.Outbox)
 
 	for _, e := range actorCol.OrderedItems {
 		mergeCollection.OrderedItems = append(mergeCollection.OrderedItems, e)
@@ -1009,17 +1009,16 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	d := StripTransferProtocol(domainURL)
 
 	if d == Domain {
-		followCol := GetObjectsFromFollow(actor)	
+		followCol := GetObjectsFromFollow(actor)
 		for _, e := range followCol {
 
 			mergeCollection.OrderedItems = append(mergeCollection.OrderedItems, e)
 		}
 	}
 
-
 	DeleteRemovedPosts(db, &mergeCollection)
 	mergeCollection.OrderedItems = DeleteTombstonePosts(&mergeCollection)
-	
+
 	sort.Sort(ObjectBaseSortDesc(mergeCollection.OrderedItems))
 
 	returnData.Board.Name = actor.Name
@@ -1036,7 +1035,7 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 	CheckError(err, "error getting captcha")
 
-	body, _ := ioutil.ReadAll(resp.Body)			
+	body, _ := ioutil.ReadAll(resp.Body)
 
 	returnData.Board.Captcha = domainURL + "/" + string(body)
 
@@ -1047,8 +1046,8 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	re = regexp.MustCompile("\\w+")
 
 	code = re.FindString(code)
-	
-	returnData.Board.CaptchaCode = code	
+
+	returnData.Board.CaptchaCode = code
 
 	returnData.Title = "/" + actor.Name + "/ - " + actor.PreferredUsername
 
@@ -1058,19 +1057,19 @@ func CatalogGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 	returnData.Key = *Key
 
-	t.ExecuteTemplate(w, "layout",  returnData)
+	t.ExecuteTemplate(w, "layout", returnData)
 }
 
-func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Collection){
+func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Collection) {
 
-	t := template.Must(template.ParseFiles("./static/main.html", "./static/nposts.html", "./static/top.html", "./static/bottom.html", "./static/posts.html"))	
+	t := template.Must(template.ParseFiles("./static/main.html", "./static/nposts.html", "./static/top.html", "./static/bottom.html", "./static/posts.html"))
 
-	actor := GetActor(collection.Actor)	
-	
-	postNum := strings.Replace(r.URL.EscapedPath(), "/" + actor.Name + "/", "", 1)
+	actor := GetActor(collection.Actor)
+
+	postNum := strings.Replace(r.URL.EscapedPath(), "/"+actor.Name+"/", "", 1)
 
 	page, _ := strconv.Atoi(postNum)
-	
+
 	returnData := new(PageData)
 
 	returnData.Board.Name = actor.Name
@@ -1095,7 +1094,7 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 
 	CheckError(err, "error getting captcha")
 
-	body, _ := ioutil.ReadAll(resp.Body)			
+	body, _ := ioutil.ReadAll(resp.Body)
 
 	returnData.Board.Captcha = domainURL + "/" + string(body)
 
@@ -1106,12 +1105,12 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 	re = regexp.MustCompile("\\w+")
 
 	code = re.FindString(code)
-	
+
 	returnData.Board.CaptchaCode = code
 
 	returnData.Title = "/" + actor.Name + "/ - " + actor.PreferredUsername
 
-	returnData.Key = *Key	
+	returnData.Key = *Key
 
 	var boardCollection []Board
 
@@ -1122,9 +1121,9 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 	}
 
 	if StripTransferProtocol(domainURL) == Domain {
-		followCol := GetObjectsFromFollow(actor)	
+		followCol := GetObjectsFromFollow(actor)
 		for _, e := range followCol {
-			mergeCollection.OrderedItems = append(mergeCollection.OrderedItems, e)			
+			mergeCollection.OrderedItems = append(mergeCollection.OrderedItems, e)
 		}
 	}
 
@@ -1138,27 +1137,25 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 	}
 
 	for _, e := range *Boards {
-		board := new(Board)		
+		board := new(Board)
 		boardActor := GetActor(e.Id)
 		board.Name = "/" + boardActor.Name + "/"
 		board.PrefName = boardActor.PreferredUsername
 		board.Location = "/" + boardActor.Name
 		boardCollection = append(boardCollection, *board)
-	}	
+	}
 
 	returnData.Boards = boardCollection
-
 
 	offset := 8
 	start := page * offset
 	for i := 0; i < offset; i++ {
 		length := len(mergeCollection.OrderedItems)
 		current := start + i
-		if(current < length) {
+		if current < length {
 			returnData.Posts = append(returnData.Posts, mergeCollection.OrderedItems[current])
 		}
 	}
-
 
 	for i, e := range returnData.Posts {
 		var replies []ObjectBase
@@ -1189,18 +1186,17 @@ func OutboxGet(w http.ResponseWriter, r *http.Request, db *sql.DB, collection Co
 	returnData.TotalPage = len(returnData.Pages) - 1
 
 	w.Header().Set("Host", LocalDomain)
-	t.ExecuteTemplate(w, "layout",  returnData)
+	t.ExecuteTemplate(w, "layout", returnData)
 }
 
-func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
+func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
-	t := template.Must(template.ParseFiles("./static/main.html", "./static/npost.html", "./static/top.html", "./static/bottom.html", "./static/posts.html"))		
+	t := template.Must(template.ParseFiles("./static/main.html", "./static/npost.html", "./static/top.html", "./static/bottom.html", "./static/posts.html"))
 	path := r.URL.Path
 	name := GetActorFromPath(path, "/")
 	re := regexp.MustCompile("\\w+$")
 	postId := re.FindString(path)
 	actor := GetActorByName(name)
-
 
 	inReplyTo := actor.Id + "/" + postId
 
@@ -1212,7 +1208,7 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 	returnData.Board.Actor = StripTransferProtocol(actor.Id)
 	returnData.Board.Summary = actor.Summary
 	returnData.Board.ModCred, _ = GetPasswordFromSession(r)
-	returnData.Board.Domain = Domain 
+	returnData.Board.Domain = Domain
 
 	re = regexp.MustCompile("(https://|http://)?(www)?.+/")
 
@@ -1227,10 +1223,10 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 		CheckError(err, "error getting captcha")
 
-		body, _ := ioutil.ReadAll(resp.Body)			
+		body, _ := ioutil.ReadAll(resp.Body)
 
 		returnData.Board.Captcha = domainURL + "/" + string(body)
- 
+
 		re = regexp.MustCompile("\\w+\\.\\w+$")
 
 		code := re.FindString(returnData.Board.Captcha)
@@ -1238,13 +1234,13 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 		re = regexp.MustCompile("\\w+")
 
 		code = re.FindString(code)
-		
+
 		returnData.Board.CaptchaCode = code
 	}
 
 	returnData.Title = "/" + returnData.Board.Name + "/ - " + returnData.Board.PrefName
 
-	returnData.Key = *Key	
+	returnData.Key = *Key
 
 	var boardCollection []Board
 
@@ -1254,8 +1250,6 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 
 	re = regexp.MustCompile("f\\w+-\\w+")
 
-
-
 	if re.MatchString(path) {
 		name := GetActorFollowNameFromPath(path)
 		followActors := GetActorsFollowFromName(actor, name)
@@ -1264,7 +1258,7 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 		DeleteRemovedPosts(db, &followCollection)
 		followCollection.OrderedItems = DeleteTombstonePosts(&followCollection)
 
-		if len(followCollection.OrderedItems) > 0 {		
+		if len(followCollection.OrderedItems) > 0 {
 			returnData.Board.InReplyTo = followCollection.OrderedItems[0].Id
 			returnData.Posts = append(returnData.Posts, followCollection.OrderedItems[0])
 		}
@@ -1285,7 +1279,7 @@ func PostGet(w http.ResponseWriter, r *http.Request, db *sql.DB){
 		}
 	}
 
-	t.ExecuteTemplate(w, "layout",  returnData)			
+	t.ExecuteTemplate(w, "layout", returnData)
 }
 
 func GetBoardCollection() []Board {
@@ -1319,34 +1313,34 @@ func GetObjectsFromFollow(actor Actor) []ObjectBase {
 }
 
 func ParseCommentForReply(comment string) string {
-	
-	re := regexp.MustCompile("(>>)(https://|http://)?(www\\.)?.+\\/\\w+")	
+
+	re := regexp.MustCompile("(>>)(https://|http://)?(www\\.)?.+\\/\\w+")
 	match := re.FindAllStringSubmatch(comment, -1)
 
 	var links []string
 
-	for i:= 0; i < len(match); i++ {
+	for i := 0; i < len(match); i++ {
 		str := strings.Replace(match[i][0], ">>", "", 1)
 		str = strings.Replace(str, "http://", "", 1)
-		str = strings.Replace(str, "https://", "", 1)		
+		str = strings.Replace(str, "https://", "", 1)
 		//		str = "https://" + str
 		links = append(links, str)
 	}
 
-	if(len(links) > 0){
+	if len(links) > 0 {
 		_, isValid := CheckValidActivity(links[0])
 
-		if(isValid) {
+		if isValid {
 			return links[0]
 		}
 	}
-	
+
 	return ""
 }
 
 func CheckValidActivity(id string) (Collection, bool) {
 
-	req, err := http.NewRequest("GET", TP + "" + id, nil)
+	req, err := http.NewRequest("GET", TP+""+id, nil)
 
 	if err != nil {
 		fmt.Println("error with request")
@@ -1359,7 +1353,7 @@ func CheckValidActivity(id string) (Collection, bool) {
 
 	if err != nil {
 		fmt.Println("error with response")
-		panic(err)		
+		panic(err)
 	}
 
 	defer resp.Body.Close()
@@ -1374,31 +1368,31 @@ func CheckValidActivity(id string) (Collection, bool) {
 		panic(err)
 	}
 
-	if respCollection.AtContext.Context == "https://www.w3.org/ns/activitystreams" &&  respCollection.OrderedItems[0].Id != "" {
-		return respCollection, true;
+	if respCollection.AtContext.Context == "https://www.w3.org/ns/activitystreams" && respCollection.OrderedItems[0].Id != "" {
+		return respCollection, true
 	}
 
-	return respCollection, false;
+	return respCollection, false
 }
 
 func ParseOptions(r *http.Request, obj ObjectBase) ObjectBase {
 	options := r.FormValue("options")
 	if options != "" {
 		option := strings.Split(options, ";")
-		email := regexp.MustCompile(".+@.+\\..+")		
+		email := regexp.MustCompile(".+@.+\\..+")
 		wallet := regexp.MustCompile("wallet:.+")
 		delete := regexp.MustCompile("delete:.+")
 		for _, e := range option {
 			if e == "noko" {
-				obj.Option = append(obj.Option, "noko")				 
+				obj.Option = append(obj.Option, "noko")
 			} else if e == "sage" {
-				obj.Option = append(obj.Option, "sage")				 				
+				obj.Option = append(obj.Option, "sage")
 			} else if e == "nokosage" {
-				obj.Option = append(obj.Option, "nokosage")				 								
+				obj.Option = append(obj.Option, "nokosage")
 			} else if email.MatchString(e) {
-				obj.Option = append(obj.Option, "email:" + e)				 												
+				obj.Option = append(obj.Option, "email:"+e)
 			} else if wallet.MatchString(e) {
-				obj.Option = append(obj.Option, "wallet")				 																
+				obj.Option = append(obj.Option, "wallet")
 				var wallet CryptoCur
 				value := strings.Split(e, ":")
 				wallet.Type = value[0]
@@ -1415,7 +1409,7 @@ func ParseOptions(r *http.Request, obj ObjectBase) ObjectBase {
 
 func DeleteTombstonePosts(collection *Collection) []ObjectBase {
 	var nColl Collection
-	
+
 	for _, e := range collection.OrderedItems {
 		if e.Type != "Tombstone" {
 			nColl.OrderedItems = append(nColl.OrderedItems, e)
@@ -1433,13 +1427,13 @@ func DeleteRemovedPosts(db *sql.DB, collection *Collection) {
 			if e.Id == j.ID {
 				if j.Type == "attachment" {
 					collection.OrderedItems[p].Attachment[0].Href = "/public/removed.png"
-					collection.OrderedItems[p].Attachment[0].Name = "deleted"					
-					collection.OrderedItems[p].Attachment[0].MediaType = "image/png"					
+					collection.OrderedItems[p].Attachment[0].Name = "deleted"
+					collection.OrderedItems[p].Attachment[0].MediaType = "image/png"
 				} else {
 					collection.OrderedItems[p].AttributedTo = "deleted"
 					collection.OrderedItems[p].Content = ""
 					collection.OrderedItems[p].Type = "Tombstone"
-					if collection.OrderedItems[p].Attachment != nil {					
+					if collection.OrderedItems[p].Attachment != nil {
 						collection.OrderedItems[p].Attachment[0].Href = "/public/removed.png"
 						collection.OrderedItems[p].Attachment[0].Name = "deleted"
 						collection.OrderedItems[p].Attachment[0].MediaType = "image/png"
@@ -1459,8 +1453,8 @@ func DeleteRemovedPosts(db *sql.DB, collection *Collection) {
 						e.Replies.OrderedItems[i].Content = ""
 						e.Replies.OrderedItems[i].Type = "Tombstone"
 						if e.Replies.OrderedItems[i].Attachment != nil {
-							e.Replies.OrderedItems[i].Attachment[0].Name = "deleted"												
-							e.Replies.OrderedItems[i].Attachment[0].Href = "/public/removed.png"						
+							e.Replies.OrderedItems[i].Attachment[0].Name = "deleted"
+							e.Replies.OrderedItems[i].Attachment[0].Href = "/public/removed.png"
 							e.Replies.OrderedItems[i].Attachment[0].MediaType = "image/png"
 						}
 					}
@@ -1471,14 +1465,14 @@ func DeleteRemovedPosts(db *sql.DB, collection *Collection) {
 }
 
 func neuter(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        if strings.HasSuffix(r.URL.Path, "/") {
-            http.NotFound(w, r)
-            return
-        }
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/") {
+			http.NotFound(w, r)
+			return
+		}
 
-        next.ServeHTTP(w, r)
-    })
+		next.ServeHTTP(w, r)
+	})
 }
 
 func GetPasswordFromSession(r *http.Request) (string, string) {
@@ -1504,7 +1498,7 @@ func GetPasswordFromSession(r *http.Request) (string, string) {
 	return parts[0], parts[1]
 }
 
-func GetClientKey() string{
+func GetClientKey() string {
 	file, err := os.Open("clientkey")
 
 	CheckError(err, "could not open client key in file")
@@ -1520,7 +1514,7 @@ func GetClientKey() string{
 	return line
 }
 
-func CreateClientKey(){
+func CreateClientKey() {
 
 	file, err := os.Create("clientkey")
 
@@ -1528,14 +1522,14 @@ func CreateClientKey(){
 
 	defer file.Close()
 
-	file.WriteString(CreateKey(32))	
+	file.WriteString(CreateKey(32))
 }
 
 func CreateKey(len int) string {
 	var key string
 	str := (CreateTripCode(RandomID(len)))
 	for i := 0; i < len; i++ {
-		key += fmt.Sprintf("%c", str[i])			
+		key += fmt.Sprintf("%c", str[i])
 	}
 	return key
 }
@@ -1560,11 +1554,17 @@ func RandomID(size int) string {
 	for i := 0; i < rng; i++ {
 		newID += string(domain[rand.Intn(len(domain))])
 	}
-	
+
 	return newID
 }
 
-func GetConfigValue(value string) string{
+func GetConfigValue(value string) string {
+	env := os.Getenv(strings.ToUpper(value))
+	if strings.Len(env) > 0 {
+		// maybe it's available as an environment variable?
+		return env
+	}
+
 	file, err := os.Open("config")
 
 	CheckError(err, "there was an error opening the config file")
@@ -1591,7 +1591,7 @@ func StripTransferProtocol(value string) string {
 	return value
 }
 
-func GetInstanceTP(instance  string) string {
+func GetInstanceTP(instance string) string {
 	actor := GetActor(Domain)
 
 	re := regexp.MustCompile("(https://|http://)")
@@ -1599,14 +1599,14 @@ func GetInstanceTP(instance  string) string {
 	return re.FindString(actor.Id)
 }
 
-
 type ObjectBaseSortDesc []ObjectBase
-func (a ObjectBaseSortDesc) Len() int { return len(a) }
+
+func (a ObjectBaseSortDesc) Len() int           { return len(a) }
 func (a ObjectBaseSortDesc) Less(i, j int) bool { return a[i].Updated > a[j].Updated }
-func (a ObjectBaseSortDesc) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a ObjectBaseSortDesc) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 type ObjectBaseSortAsc []ObjectBase
-func (a ObjectBaseSortAsc) Len() int { return len(a) }
-func (a ObjectBaseSortAsc) Less(i, j int) bool { return a[i].Published < a[j].Published }
-func (a ObjectBaseSortAsc) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 
+func (a ObjectBaseSortAsc) Len() int           { return len(a) }
+func (a ObjectBaseSortAsc) Less(i, j int) bool { return a[i].Published < a[j].Published }
+func (a ObjectBaseSortAsc) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
